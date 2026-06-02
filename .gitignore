@@ -1,52 +1,31 @@
+# Raw data files - do not commit
+*.h5
+*.h5ad
+*.mtx
+*.mtx.gz
+*.tsv.gz
+*.csv.gz
+*.txt.gz
+*.tar
+*.tar.gz
+*.rds
+*.rds.gz
+
+# Data directories
+data/raw/
+notebooks/.ipynb_checkpoints/
+
 # Python
 __pycache__/
-*.py[cod]
-*$py.class
-*.egg-info/
-dist/
-build/
-.eggs/
-venv/
+*.pyc
+*.pyo
 .venv/
-env/
-
-# Jupyter
-.ipynb_checkpoints/
-*.ipynb_checkpoints
-
-# Data and embeddings (large files)
-data/raw/*
-data/processed/*
-data/embeddings/*
-!data/raw/.gitkeep
-!data/processed/.gitkeep
-!data/embeddings/.gitkeep
-*.h5ad
-*.h5
-*.loom
-*.zarr/
-
-# Results
-results/*
-!results/.gitkeep
+venv/
 
 # IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
 
 # OS
 .DS_Store
 Thumbs.db
-
-# Environment
-.env
-.env.local
-
-# Model checkpoints
-checkpoints/
-*.pt
-*.bin
-*.safetensors
