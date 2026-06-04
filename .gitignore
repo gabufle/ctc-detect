@@ -30,3 +30,4 @@ venv/
 .DS_Store
 Thumbs.db
 Geneformer/
+*.egg-info/
