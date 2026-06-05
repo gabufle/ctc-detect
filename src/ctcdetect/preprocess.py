@@ -7,6 +7,8 @@ produced by Cell Ranger and other pipelines.
 from pathlib import Path
 from typing import Optional
 
+import scanpy as sc
+import pandas as pd
 from rich.console import Console
 
 console = Console()
@@ -63,3 +65,39 @@ def validate_input(input_path: Path) -> bool:
     console.print(f"[green]✓[/green] Detected format: {SUPPORTED_FORMATS[fmt]}")
     console.print("[yellow]Note:[/yellow] Full validation not yet implemented (stub).")
     return True
+
+
+def load_data(input_path: Path) -> sc.AnnData:
+    """Load single-cell data from supported formats into an AnnData object.
+
+    Args:
+        input_path: Path to the input file or directory.
+
+    Returns:
+        AnnData object containing the data.
+    """
+    fmt = detect_format(input_path)
+    if fmt == "cellranger":
+        # Assume input_path is the directory containing filtered_feature_bc_matrix/
+        # Or directly the filtered_feature_bc_matrix directory
+        if (input_path / "filtered_feature_bc_matrix").exists():
+            mtx_dir = input_path / "filtered_feature_bc_matrix"
+        else:
+            mtx_dir = input_path
+        adata = sc.read_10x_mtx(
+            mtx_dir, var_names="gene_symbols", cache=True, make_unique=True
+        )
+    elif fmt == "h5ad":
+        adata = sc.read_h5ad(input_path)
+    elif fmt == "csv":
+        # Assume genes x cells matrix with gene names as row names and cell IDs as column names
+        df = pd.read_csv(input_path, index_col=0)
+        adata = sc.AnnData(df.T)  # Transpose to cells x genes
+        adata.var_names = df.index.astype(str)
+        adata.obs_names = df.columns.astype(str)
+    else:
+        # Should not happen due to detect_format
+        raise RuntimeError(f"Unsupported format: {fmt}")
+
+    console.print(f"[green]✓[/green] Loaded data with shape {adata.shape}")
+    return adata

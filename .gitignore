@@ -34,3 +34,8 @@ Geneformer/
 data/processed/tokenized*
 data/processed/*.h5ad
 data/processed/*.arrow
+
+# Test outputs
+test_output/
+test_data/
+cache/

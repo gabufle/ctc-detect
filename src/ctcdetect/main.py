@@ -47,8 +47,9 @@ def run(
         ...,
         "--output", "-o",
         help=(
-            "Path to write results CSV file.\n"
-            "The CSV will contain cell barcodes and their CTC probability scores."
+            "Path to output directory.\n"
+            "CTC-Detect will write ctc_probabilities.csv, umap.png,\n"
+            "and summary.txt to this directory."
         ),
         rich_help_panel="Input/Output",
     ),
