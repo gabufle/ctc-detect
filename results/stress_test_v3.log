@@ -1,0 +1,215 @@
+[15:46:08] ============================================================
+[15:46:08] CTC Model Stress Test Pipeline v3 (optimized)
+[15:46:08] ============================================================
+[15:46:08] Loading CTC dataset...
+[15:46:08]   Shape: (11156, 7637)
+[15:46:08]   Splits: train=7808, val=1674, test=1674
+[15:46:08]   Fine-tuned checkpoint: MISSING
+[15:46:08] Loading base Geneformer V2-316M...
+[15:46:08]   Device: cpu
+Some weights of BertModel were not initialized from the model checkpoint at /home/gabuf/.hermes/profiles/ml-engineer/home/.cache/huggingface/hub/models--ctheodoris--Geneformer/snapshots/04c2b2e84da7c0f385c3f9ad8f3ec24bab6650e5 and are newly initialized: ['pooler.dense.bias', 'pooler.dense.weight']
+You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.
+[15:46:10]   Model: 18L, 1152H, 316M params
+[15:46:10] Loading 10k PBMC data...
+/home/gabuf/projects/ctc-detect/.venv/lib/python3.11/site-packages/anndata/_core/anndata.py:1884: UserWarning: Variable names are not unique. To make them unique, call `.var_names_make_unique`.
+  utils.warn_names_duplicates("var")
+/home/gabuf/projects/ctc-detect/.venv/lib/python3.11/site-packages/anndata/_core/anndata.py:1884: UserWarning: Variable names are not unique. To make them unique, call `.var_names_make_unique`.
+  utils.warn_names_duplicates("var")
+[15:46:12]   PBMC after QC: (11537, 20292)
+[15:46:12] ============================================================
+[15:46:12] TEST 1: Healthy PBMC False Positive Rate
+[15:46:12] ============================================================
+[15:46:12]   Mapping genes to Ensembl...
+[15:46:12]   After mapping: (11537, 16249)
+[15:46:14]   Using cached: 11537 cells
+[15:46:14] Running inference on PBMCs (this will take ~60 min)...
+[15:46:23]   PBMC: 8/11537 (0%) [1 cells/s, ETA 227min]
+[15:48:03]   PBMC: 88/11537 (1%) [1 cells/s, ETA 237min]
+[15:50:01]   PBMC: 168/11537 (1%) [1 cells/s, ETA 257min]
+[15:52:20]   PBMC: 248/11537 (2%) [1 cells/s, ETA 278min]
+[15:55:21]   PBMC: 328/11537 (3%) [1 cells/s, ETA 312min]
+[15:57:36]   PBMC: 408/11537 (4%) [1 cells/s, ETA 310min]
+[15:59:30]   PBMC: 488/11537 (4%) [1 cells/s, ETA 301min]
+[16:00:54]   PBMC: 568/11537 (5%) [1 cells/s, ETA 284min]
+[16:02:21]   PBMC: 648/11537 (6%) [1 cells/s, ETA 271min]
+[16:04:29]   PBMC: 728/11537 (6%) [1 cells/s, ETA 271min]
+[16:06:53]   PBMC: 808/11537 (7%) [1 cells/s, ETA 274min]
+[16:09:16]   PBMC: 888/11537 (8%) [1 cells/s, ETA 276min]
+[16:10:44]   PBMC: 968/11537 (8%) [1 cells/s, ETA 268min]
+[16:12:15]   PBMC: 1048/11537 (9%) [1 cells/s, ETA 260min]
+[16:13:42]   PBMC: 1128/11537 (10%) [1 cells/s, ETA 253min]
+[16:15:59]   PBMC: 1208/11537 (10%) [1 cells/s, ETA 254min]
+[16:18:24]   PBMC: 1288/11537 (11%) [1 cells/s, ETA 256min]
+[16:20:48]   PBMC: 1368/11537 (12%) [1 cells/s, ETA 257min]
+[16:23:12]   PBMC: 1448/11537 (13%) [1 cells/s, ETA 258min]
+[16:25:36]   PBMC: 1528/11537 (13%) [1 cells/s, ETA 258min]
+[16:28:00]   PBMC: 1608/11537 (14%) [1 cells/s, ETA 258min]
+[16:30:23]   PBMC: 1688/11537 (15%) [1 cells/s, ETA 258min]
+[16:32:48]   PBMC: 1768/11537 (15%) [1 cells/s, ETA 257min]
+[16:35:12]   PBMC: 1848/11537 (16%) [1 cells/s, ETA 257min]
+[16:37:37]   PBMC: 1928/11537 (17%) [1 cells/s, ETA 256min]
+[16:40:00]   PBMC: 2008/11537 (17%) [1 cells/s, ETA 255min]
+[16:42:24]   PBMC: 2088/11537 (18%) [1 cells/s, ETA 254min]
+[16:44:49]   PBMC: 2168/11537 (19%) [1 cells/s, ETA 253min]
+[16:47:14]   PBMC: 2248/11537 (19%) [1 cells/s, ETA 252min]
+[16:49:38]   PBMC: 2328/11537 (20%) [1 cells/s, ETA 251min]
+[16:52:03]   PBMC: 2408/11537 (21%) [1 cells/s, ETA 250min]
+[16:54:27]   PBMC: 2488/11537 (22%) [1 cells/s, ETA 248min]
+[16:56:51]   PBMC: 2568/11537 (22%) [1 cells/s, ETA 247min]
+[16:59:15]   PBMC: 2648/11537 (23%) [1 cells/s, ETA 245min]
+[17:01:38]   PBMC: 2728/11537 (24%) [1 cells/s, ETA 244min]
+[17:04:03]   PBMC: 2808/11537 (24%) [1 cells/s, ETA 242min]
+[17:06:28]   PBMC: 2888/11537 (25%) [1 cells/s, ETA 240min]
+[17:08:48]   PBMC: 2968/11537 (26%) [1 cells/s, ETA 238min]
+[17:11:13]   PBMC: 3048/11537 (26%) [1 cells/s, ETA 237min]
+[17:13:37]   PBMC: 3128/11537 (27%) [1 cells/s, ETA 235min]
+[17:16:01]   PBMC: 3208/11537 (28%) [1 cells/s, ETA 233min]
+[17:18:25]   PBMC: 3288/11537 (28%) [1 cells/s, ETA 231min]
+[17:20:57]   PBMC: 3368/11537 (29%) [1 cells/s, ETA 230min]
+[17:23:21]   PBMC: 3448/11537 (30%) [1 cells/s, ETA 228min]
+[17:25:45]   PBMC: 3528/11537 (31%) [1 cells/s, ETA 226min]
+[17:28:09]   PBMC: 3608/11537 (31%) [1 cells/s, ETA 224min]
+[17:30:33]   PBMC: 3688/11537 (32%) [1 cells/s, ETA 222min]
+[17:32:57]   PBMC: 3768/11537 (33%) [1 cells/s, ETA 220min]
+[17:35:21]   PBMC: 3848/11537 (33%) [1 cells/s, ETA 218min]
+[17:37:45]   PBMC: 3928/11537 (34%) [1 cells/s, ETA 216min]
+[17:40:08]   PBMC: 4008/11537 (35%) [1 cells/s, ETA 214min]
+[17:42:33]   PBMC: 4088/11537 (35%) [1 cells/s, ETA 212min]
+[17:44:57]   PBMC: 4168/11537 (36%) [1 cells/s, ETA 210min]
+[17:47:10]   PBMC: 4248/11537 (37%) [1 cells/s, ETA 208min]
+[17:48:35]   PBMC: 4328/11537 (38%) [1 cells/s, ETA 204min]
+[17:50:00]   PBMC: 4408/11537 (38%) [1 cells/s, ETA 200min]
+[17:51:25]   PBMC: 4488/11537 (39%) [1 cells/s, ETA 197min]
+[17:52:50]   PBMC: 4568/11537 (40%) [1 cells/s, ETA 193min]
+[17:54:17]   PBMC: 4648/11537 (40%) [1 cells/s, ETA 190min]
+[17:55:42]   PBMC: 4728/11537 (41%) [1 cells/s, ETA 186min]
+[17:57:06]   PBMC: 4808/11537 (42%) [1 cells/s, ETA 183min]
+[17:58:32]   PBMC: 4888/11537 (42%) [1 cells/s, ETA 180min]
+[17:59:57]   PBMC: 4968/11537 (43%) [1 cells/s, ETA 177min]
+[18:01:22]   PBMC: 5048/11537 (44%) [1 cells/s, ETA 174min]
+[18:02:46]   PBMC: 5128/11537 (44%) [1 cells/s, ETA 171min]
+[18:04:11]   PBMC: 5208/11537 (45%) [1 cells/s, ETA 168min]
+[18:05:35]   PBMC: 5288/11537 (46%) [1 cells/s, ETA 165min]
+[18:07:00]   PBMC: 5368/11537 (47%) [1 cells/s, ETA 162min]
+[18:08:25]   PBMC: 5448/11537 (47%) [1 cells/s, ETA 159min]
+[18:09:49]   PBMC: 5528/11537 (48%) [1 cells/s, ETA 156min]
+[18:11:13]   PBMC: 5608/11537 (49%) [1 cells/s, ETA 153min]
+[18:12:38]   PBMC: 5688/11537 (49%) [1 cells/s, ETA 151min]
+[18:14:03]   PBMC: 5768/11537 (50%) [1 cells/s, ETA 148min]
+[18:15:27]   PBMC: 5848/11537 (51%) [1 cells/s, ETA 145min]
+[18:16:52]   PBMC: 5928/11537 (51%) [1 cells/s, ETA 143min]
+[18:18:17]   PBMC: 6008/11537 (52%) [1 cells/s, ETA 140min]
+[18:19:41]   PBMC: 6088/11537 (53%) [1 cells/s, ETA 137min]
+[18:21:06]   PBMC: 6168/11537 (53%) [1 cells/s, ETA 135min]
+[18:22:31]   PBMC: 6248/11537 (54%) [1 cells/s, ETA 132min]
+[18:23:55]   PBMC: 6328/11537 (55%) [1 cells/s, ETA 130min]
+[18:25:20]   PBMC: 6408/11537 (56%) [1 cells/s, ETA 127min]
+[18:26:45]   PBMC: 6488/11537 (56%) [1 cells/s, ETA 125min]
+[18:28:10]   PBMC: 6568/11537 (57%) [1 cells/s, ETA 123min]
+[18:29:43]   PBMC: 6648/11537 (58%) [1 cells/s, ETA 120min]
+[18:31:07]   PBMC: 6728/11537 (58%) [1 cells/s, ETA 118min]
+[18:32:32]   PBMC: 6808/11537 (59%) [1 cells/s, ETA 116min]
+[18:33:57]   PBMC: 6888/11537 (60%) [1 cells/s, ETA 113min]
+[18:35:21]   PBMC: 6968/11537 (60%) [1 cells/s, ETA 111min]
+[18:36:45]   PBMC: 7048/11537 (61%) [1 cells/s, ETA 109min]
+[18:38:10]   PBMC: 7128/11537 (62%) [1 cells/s, ETA 106min]
+[18:39:34]   PBMC: 7208/11537 (62%) [1 cells/s, ETA 104min]
+[18:40:58]   PBMC: 7288/11537 (63%) [1 cells/s, ETA 102min]
+[18:42:23]   PBMC: 7368/11537 (64%) [1 cells/s, ETA 100min]
+[18:43:48]   PBMC: 7448/11537 (65%) [1 cells/s, ETA 97min]
+[18:45:12]   PBMC: 7528/11537 (65%) [1 cells/s, ETA 95min]
+[18:46:37]   PBMC: 7608/11537 (66%) [1 cells/s, ETA 93min]
+[18:48:01]   PBMC: 7688/11537 (67%) [1 cells/s, ETA 91min]
+[18:49:26]   PBMC: 7768/11537 (67%) [1 cells/s, ETA 89min]
+[18:50:51]   PBMC: 7848/11537 (68%) [1 cells/s, ETA 87min]
+[18:52:15]   PBMC: 7928/11537 (69%) [1 cells/s, ETA 85min]
+[18:53:40]   PBMC: 8008/11537 (69%) [1 cells/s, ETA 83min]
+[18:55:04]   PBMC: 8088/11537 (70%) [1 cells/s, ETA 81min]
+[18:56:29]   PBMC: 8168/11537 (71%) [1 cells/s, ETA 78min]
+[18:57:54]   PBMC: 8248/11537 (71%) [1 cells/s, ETA 76min]
+[18:59:18]   PBMC: 8328/11537 (72%) [1 cells/s, ETA 74min]
+[19:00:43]   PBMC: 8408/11537 (73%) [1 cells/s, ETA 72min]
+[19:02:07]   PBMC: 8488/11537 (74%) [1 cells/s, ETA 70min]
+[19:03:32]   PBMC: 8568/11537 (74%) [1 cells/s, ETA 68min]
+[19:04:56]   PBMC: 8648/11537 (75%) [1 cells/s, ETA 66min]
+[19:06:21]   PBMC: 8728/11537 (76%) [1 cells/s, ETA 64min]
+[19:07:45]   PBMC: 8808/11537 (76%) [1 cells/s, ETA 62min]
+[19:09:10]   PBMC: 8888/11537 (77%) [1 cells/s, ETA 60min]
+[19:10:34]   PBMC: 8968/11537 (78%) [1 cells/s, ETA 59min]
+[19:11:59]   PBMC: 9048/11537 (78%) [1 cells/s, ETA 57min]
+[19:13:23]   PBMC: 9128/11537 (79%) [1 cells/s, ETA 55min]
+[19:14:48]   PBMC: 9208/11537 (80%) [1 cells/s, ETA 53min]
+[19:16:12]   PBMC: 9288/11537 (81%) [1 cells/s, ETA 51min]
+[19:17:37]   PBMC: 9368/11537 (81%) [1 cells/s, ETA 49min]
+[19:19:01]   PBMC: 9448/11537 (82%) [1 cells/s, ETA 47min]
+[19:20:26]   PBMC: 9528/11537 (83%) [1 cells/s, ETA 45min]
+[19:21:51]   PBMC: 9608/11537 (83%) [1 cells/s, ETA 43min]
+[19:23:15]   PBMC: 9688/11537 (84%) [1 cells/s, ETA 41min]
+[19:24:40]   PBMC: 9768/11537 (85%) [1 cells/s, ETA 40min]
+[19:26:04]   PBMC: 9848/11537 (85%) [1 cells/s, ETA 38min]
+[19:27:29]   PBMC: 9928/11537 (86%) [1 cells/s, ETA 36min]
+[19:28:54]   PBMC: 10008/11537 (87%) [1 cells/s, ETA 34min]
+[19:30:19]   PBMC: 10088/11537 (87%) [1 cells/s, ETA 32min]
+[19:31:43]   PBMC: 10168/11537 (88%) [1 cells/s, ETA 30min]
+[19:33:08]   PBMC: 10248/11537 (89%) [1 cells/s, ETA 29min]
+[19:34:32]   PBMC: 10328/11537 (90%) [1 cells/s, ETA 27min]
+[19:35:57]   PBMC: 10408/11537 (90%) [1 cells/s, ETA 25min]
+[19:37:21]   PBMC: 10488/11537 (91%) [1 cells/s, ETA 23min]
+[19:38:46]   PBMC: 10568/11537 (92%) [1 cells/s, ETA 21min]
+[19:40:11]   PBMC: 10648/11537 (92%) [1 cells/s, ETA 20min]
+[19:41:35]   PBMC: 10728/11537 (93%) [1 cells/s, ETA 18min]
+[19:43:00]   PBMC: 10808/11537 (94%) [1 cells/s, ETA 16min]
+[19:44:25]   PBMC: 10888/11537 (94%) [1 cells/s, ETA 14min]
+[19:45:49]   PBMC: 10968/11537 (95%) [1 cells/s, ETA 12min]
+[19:47:14]   PBMC: 11048/11537 (96%) [1 cells/s, ETA 11min]
+[19:48:38]   PBMC: 11128/11537 (96%) [1 cells/s, ETA 9min]
+[19:50:03]   PBMC: 11208/11537 (97%) [1 cells/s, ETA 7min]
+[19:51:28]   PBMC: 11288/11537 (98%) [1 cells/s, ETA 5min]
+[19:52:53]   PBMC: 11368/11537 (99%) [1 cells/s, ETA 4min]
+[19:54:17]   PBMC: 11448/11537 (99%) [1 cells/s, ETA 2min]
+[19:55:42]   PBMC: 11528/11537 (100%) [1 cells/s, ETA 0min]
+[19:55:52]   Inference done in 249.6 min
+[19:55:52]   Total cells: 11537
+[19:55:52]   Score > 0.5: 5768 (0.5000)
+[19:55:52]   Score > 0.3: 10022 (0.8687)
+[19:55:52]   Score > 0.1: 11503 (0.9971)
+[19:55:52]   Mean: 0.5065, Median: 0.5000
+[19:55:52] ============================================================
+[19:55:52] TEST 2: Spike-in at Realistic Ratios
+[19:55:52] ============================================================
+[19:55:52]   Available CTC test cells: 1269
+[19:55:52]   Available PBMC cells: 11537
+[19:55:52] 
+  Ratio 1:100 (115 CTCs + 11500 PBMCs):
+[19:55:55]   Combined: 11615 cells on 7637 genes
+[19:55:55]   Mapping genes to Ensembl...
+[19:55:56]   After mapping: (11615, 7517)
+/home/gabuf/projects/ctc-detect/.venv/lib/python3.11/site-packages/geneformer/tokenizer.py:544: FutureWarning: Series.__getitem__ treating keys as positions is deprecated. In a future version, integer keys will always be treated as labels (consistent with DataFrame behavior). To access a value by position, use `ser.iloc[pos]`
+  for i in adata.var["ensembl_id_collapsed"][coding_miRNA_loc]
+/home/gabuf/projects/ctc-detect/.venv/lib/python3.11/site-packages/geneformer/tokenizer.py:547: FutureWarning: Series.__getitem__ treating keys as positions is deprecated. In a future version, integer keys will always be treated as labels (consistent with DataFrame behavior). To access a value by position, use `ser.iloc[pos]`
+  coding_miRNA_ids = adata.var["ensembl_id_collapsed"][coding_miRNA_loc]
+/tmp/tmpn0ls2sx0.h5ad has no column attribute 'filter_pass'; tokenizing all cells.
+Creating dataset.
+Traceback (most recent call last):
+  File "/home/gabuf/projects/ctc-detect/stress_test_v3.py", line 605, in <module>
+    main()
+  File "/home/gabuf/projects/ctc-detect/stress_test_v3.py", line 290, in main
+    ds, _, _ = prepare_and_tokenize_adata(combined, tmp_dir)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/gabuf/projects/ctc-detect/stress_test_v3.py", line 103, in prepare_and_tokenize_adata
+    ds, path = tokenize_adata(adata, output_dir)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/gabuf/projects/ctc-detect/stress_test_v3.py", line 89, in tokenize_adata
+    ds = tokenizer.create_dataset(cells, meta, counts, use_generator=False, keep_uncropped_input_ids=False)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/gabuf/projects/ctc-detect/.venv/lib/python3.11/site-packages/geneformer/tokenizer.py", line 779, in create_dataset
+    output_dataset_truncated = output_dataset.map(
+                               ^^^^^^^^^^^^^^^^^^^
+  File "/home/gabuf/projects/ctc-detect/.venv/lib/python3.11/site-packages/datasets/arrow_dataset.py", line 575, in wrapper
+    out: Union["Dataset", "DatasetDict"] = func(self, *args, **kwargs)
+                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/gabuf/projects/ctc-detect/.venv/lib/python3.11/site-packages/datasets/arrow_dataset.py", line 3624, in map
+    for rank, done, content in iflatmap_unordered(
+  File "/home/gabuf/projects/ctc-detect/.venv/lib/python3.11/site-packages/datasets/utils/py_utils.py", line 617, in iflatmap_unordered
+    raise RuntimeError(
+RuntimeError: One of the subprocesses has abruptly died during map operation.To debug the error, disable multiprocessing.

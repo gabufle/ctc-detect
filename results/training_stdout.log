@@ -1,0 +1,32 @@
+2026-06-04 14:01:59,227 [INFO] ============================================================
+2026-06-04 14:01:59,227 [INFO] Geneformer CTC Classification — LoRA Fine-tuning
+2026-06-04 14:01:59,228 [INFO] ============================================================
+2026-06-04 14:01:59,228 [INFO] Device: cpu
+2026-06-04 14:01:59,228 [INFO] Batch size: 2 (accumulate 8x = effective 16)
+2026-06-04 14:01:59,228 [INFO] Learning rate: 0.0001
+2026-06-04 14:01:59,228 [INFO] Max epochs: 20
+2026-06-04 14:01:59,228 [INFO] LoRA: r=8, alpha=16, dropout=0.1
+2026-06-04 14:01:59,228 [INFO] Loading h5ad obs (backed mode) for labels...
+2026-06-04 14:02:00,257 [INFO] adata: 11156 cells x 7637 genes
+2026-06-04 14:02:00,257 [INFO] Loading tokenized train split...
+2026-06-04 14:02:00,291 [INFO]   train: 5920 CTC (1), 1888 non-CTC (0) — 24.2% minority
+2026-06-04 14:02:00,301 [INFO] Loading tokenized val split...
+2026-06-04 14:02:00,310 [INFO]   val: 1269 CTC (1), 405 non-CTC (0) — 24.2% minority
+2026-06-04 14:02:00,313 [INFO] Loading tokenized test split...
+2026-06-04 14:02:00,324 [INFO]   test: 1269 CTC (1), 405 non-CTC (0) — 24.2% minority
+2026-06-04 14:02:00,388 [INFO] Class counts: [1888, 5920]
+2026-06-04 14:02:00,388 [INFO] Class weights: [1.5163934426229508, 0.4836065573770492]
+2026-06-04 14:02:00,587 [INFO] Train batches/epoch: 3904
+2026-06-04 14:02:00,587 [INFO] Building model (this may take a minute on CPU)...
+2026-06-04 14:02:00,587 [INFO] Loading Geneformer from cache: /home/gabuf/.hermes/profiles/ml-engineer/home/.cache/huggingface/hub/models--ctheodoris--Geneformer/snapshots/04c2b2e84da7c0f385c3f9ad8f3ec24bab6650e5
+2026-06-04 14:02:00,587 [INFO] Loading to cpu (float32, ~1.2GB)...
+`torch_dtype` is deprecated! Use `dtype` instead!
+Some weights of BertModel were not initialized from the model checkpoint at /home/gabuf/.hermes/profiles/ml-engineer/home/.cache/huggingface/hub/models--ctheodoris--Geneformer/snapshots/04c2b2e84da7c0f385c3f9ad8f3ec24bab6650e5 and are newly initialized: ['pooler.dense.bias', 'pooler.dense.weight']
+You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.
+2026-06-04 14:02:00,751 [INFO] Base model loaded. Type: BertModel
+2026-06-04 14:02:00,945 [INFO] Applying LoRA configuration...
+trainable params: 663,552 || all params: 316,995,840 || trainable%: 0.2093
+2026-06-04 14:02:02,347 [INFO] Trainable: 959,234 | Frozen: 316,332,288 (0.30%)
+2026-06-04 14:02:02,350 [INFO] Model ready on device.
+2026-06-04 14:02:02,351 [INFO] Steps/epoch: 488, total: 9760, warmup: 976
+2026-06-04 14:02:02,351 [INFO] Starting training loop...

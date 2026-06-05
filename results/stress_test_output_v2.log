@@ -1,0 +1,38 @@
+[13:06:49] ============================================================
+[13:06:49] CTC Model Stress Test Pipeline v2
+[13:06:49] ============================================================
+[13:06:49] Loading CTC dataset (backed mode)...
+[13:06:49]   Shape: (11156, 7637)
+[13:06:49]   Splits: train=7808, val=1674, test=1674
+[13:06:49]   Fine-tuned checkpoint: MISSING
+[13:06:49] Loading base Geneformer V2-316M...
+[13:06:49]   Device: cpu
+Some weights of BertModel were not initialized from the model checkpoint at /home/gabuf/.hermes/profiles/ml-engineer/home/.cache/huggingface/hub/models--ctheodoris--Geneformer/snapshots/04c2b2e84da7c0f385c3f9ad8f3ec24bab6650e5 and are newly initialized: ['pooler.dense.bias', 'pooler.dense.weight']
+You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.
+[13:06:49]   Model: 18L, 1152H, 316M params
+[13:06:49] Loading 10k PBMC data...
+/home/gabuf/projects/ctc-detect/.venv/lib/python3.11/site-packages/anndata/_core/anndata.py:1884: UserWarning: Variable names are not unique. To make them unique, call `.var_names_make_unique`.
+  utils.warn_names_duplicates("var")
+/home/gabuf/projects/ctc-detect/.venv/lib/python3.11/site-packages/anndata/_core/anndata.py:1884: UserWarning: Variable names are not unique. To make them unique, call `.var_names_make_unique`.
+  utils.warn_names_duplicates("var")
+[13:06:52]   PBMC: (11537, 20292)
+[13:06:52] ============================================================
+[13:06:52] TEST 1: Healthy PBMC False Positive Rate
+[13:06:52] ============================================================
+[13:06:52] Loading 10k PBMC data...
+/home/gabuf/projects/ctc-detect/.venv/lib/python3.11/site-packages/anndata/_core/anndata.py:1884: UserWarning: Variable names are not unique. To make them unique, call `.var_names_make_unique`.
+  utils.warn_names_duplicates("var")
+/home/gabuf/projects/ctc-detect/.venv/lib/python3.11/site-packages/anndata/_core/anndata.py:1884: UserWarning: Variable names are not unique. To make them unique, call `.var_names_make_unique`.
+  utils.warn_names_duplicates("var")
+[13:06:53]   Raw shape: (11769, 33538)
+[13:06:54]   After QC: (11537, 20292)
+[13:06:54]   Mapping genes to Ensembl IDs...
+[13:06:54]   After gene mapping: (11537, 16249)
+/home/gabuf/projects/ctc-detect/.venv/lib/python3.11/site-packages/geneformer/tokenizer.py:544: FutureWarning: Series.__getitem__ treating keys as positions is deprecated. In a future version, integer keys will always be treated as labels (consistent with DataFrame behavior). To access a value by position, use `ser.iloc[pos]`
+  for i in adata.var["ensembl_id_collapsed"][coding_miRNA_loc]
+/home/gabuf/projects/ctc-detect/.venv/lib/python3.11/site-packages/geneformer/tokenizer.py:547: FutureWarning: Series.__getitem__ treating keys as positions is deprecated. In a future version, integer keys will always be treated as labels (consistent with DataFrame behavior). To access a value by position, use `ser.iloc[pos]`
+  coding_miRNA_ids = adata.var["ensembl_id_collapsed"][coding_miRNA_loc]
+/tmp/tmp00i37ltj.h5ad has no column attribute 'filter_pass'; tokenizing all cells.
+Creating dataset.
+[13:07:13]   Tokenized 11537 cells -> /home/gabuf/projects/ctc-detect/data/processed/tokenized_pbmc_10k
+[13:07:13] Running inference on PBMCs...

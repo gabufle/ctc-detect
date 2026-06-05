@@ -1,0 +1,27 @@
+[16:02:40] ============================================================
+[16:02:40] CTC Stress Test v4 (optimized, base model)
+[16:02:40] ============================================================
+[16:02:40] Loading CTC dataset...
+[16:02:40]   Shape: (11156, 7637)
+[16:02:40]   Splits: train=7808, val=1674, test=1674
+[16:02:40]   Fine-tuned checkpoint: MISSING
+[16:02:40] Loading base Geneformer V2-316M...
+Some weights of BertModel were not initialized from the model checkpoint at /home/gabuf/.hermes/profiles/ml-engineer/home/.cache/huggingface/hub/models--ctheodoris--Geneformer/snapshots/04c2b2e84da7c0f385c3f9ad8f3ec24bab6650e5 and are newly initialized: ['pooler.dense.bias', 'pooler.dense.weight']
+You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.
+[16:02:43]   Model: 18L, 1152H, 316M params
+[16:02:43] Loading PBMC data...
+/home/gabuf/projects/ctc-detect/.venv/lib/python3.11/site-packages/anndata/_core/anndata.py:1884: UserWarning: Variable names are not unique. To make them unique, call `.var_names_make_unique`.
+  utils.warn_names_duplicates("var")
+/home/gabuf/projects/ctc-detect/.venv/lib/python3.11/site-packages/anndata/_core/anndata.py:1884: UserWarning: Variable names are not unique. To make them unique, call `.var_names_make_unique`.
+  utils.warn_names_duplicates("var")
+[16:02:46]   PBMC after QC: (11537, 20292)
+[16:02:46]   Mapping genes to Ensembl...
+[16:02:47]   After mapping: (11537, 16249)
+[16:02:50]   Using cached: 11537 cells
+[16:02:50]   Pre-loading 11537 cells to numpy (max_len=128)...
+[16:03:00] ============================================================
+[16:03:00] TEST 1: Healthy PBMC False Positive Rate
+[16:03:00] ============================================================
+[16:08:03]   PBMC: 168/11537 (1%) [1 cells/s, ETA 342min]
+=============
+[16:08:03]   PBMC: 168/11537 (1%) [1 cells/s, ETA 342min]
