@@ -50,3 +50,4 @@ cache/
 *.pt
 *.pkl
 checkpoints/
+.coverage\nhtmlcov/\n.venv/\n__pycache__/\n*.egg-info/\ndata/\nGeneformer/\nresults/\n.ipynb_checkpoints/\n
