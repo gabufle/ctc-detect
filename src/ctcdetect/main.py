@@ -49,7 +49,7 @@ def run(
         help=(
             "Path to output directory.\n"
             "CTC-Detect will write ctc_probabilities.csv, umap.png,\n"
-            "and summary.txt to this directory."
+            "summary.txt, and summary.html to this directory."
         ),
         rich_help_panel="Input/Output",
     ),
@@ -62,12 +62,32 @@ def run(
         ),
         rich_help_panel="Model Options",
     ),
+    threshold: float = typer.Option(
+        0.5,
+        "--threshold", "-t",
+        help=(
+            "Probability threshold for calling a cell a CTC (0.0–1.0).\n"
+            "Cells with CTC probability >= threshold are called CTCs."
+        ),
+        rich_help_panel="Detection Options",
+    ),
+    skip_umap: bool = typer.Option(
+        False,
+        "--skip-umap",
+        help=(
+            "Skip UMAP visualization for faster runs.\n"
+            "CSV scores and summary reports will still be generated."
+        ),
+        rich_help_panel="Detection Options",
+    ),
 ):
     """Run CTC detection on a single sample.
 
     Takes your Cell Ranger output and scores each cell for
     circulating tumor cell probability using Geneformer.
     """
+    import pandas as pd
+
     print_banner()
     input_path = validate_input_path(input, "Input path")
     output_path = validate_output_path(output)
@@ -80,9 +100,24 @@ def run(
         progress.add_task("Loading model and tokenizing...", total=None)
 
     from ctcdetect.detect import run_detection
-    run_detection(input_path, output_path, cancer_type)
+    run_detection(input_path, output_path, cancer_type, threshold, skip_umap)
+
+    # Generate HTML report
+    from ctcdetect.report import generate_html_report
+    csv_path = output_path / "ctc_probabilities.csv"
+    generate_html_report(csv_path, output_path, threshold)
+
+    # Print summary statistics
+    results_df = pd.read_csv(csv_path)
+    total_cells = len(results_df)
+    ctc_count = (results_df["ctc_probability"] >= threshold).sum()
+    mean_prob = results_df["ctc_probability"].mean()
 
     console.print(f"\n[green]✓[/green] Results written to {output_path}")
+    console.print(f"\n[bold]Summary Statistics:[/bold]")
+    console.print(f"  Total cells analyzed:  {total_cells}")
+    console.print(f"  CTCs detected (≥{threshold}): {ctc_count} ({ctc_count/total_cells*100:.1f}%)")
+    console.print(f"  Mean CTC probability:  {mean_prob:.4f}")
 
 
 @app.command()

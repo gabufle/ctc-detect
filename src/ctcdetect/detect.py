@@ -594,6 +594,8 @@ def run_detection(
     input_path: Path,
     output_path: Path,
     cancer_type: Optional[str] = None,
+    threshold: float = 0.5,
+    skip_umap: bool = False,
 ) -> None:
     """Run CTC detection on a single sample.
 
@@ -605,6 +607,8 @@ def run_detection(
         input_path: Path to Cell Ranger output directory or h5ad file.
         output_path: Path to output directory (created if needed).
         cancer_type: Optional cancer type hint (currently unused).
+        threshold: Probability threshold for calling a cell a CTC (default 0.5).
+        skip_umap: If True, skip UMAP computation for faster runs.
     """
     _check_geneformer()
     model_dir = _resolve_model_dir()
@@ -649,13 +653,19 @@ def run_detection(
             "uncertain": uncertain,
         })
 
+        # Apply threshold to predicted labels
+        results_df["predicted_label"] = (results_df["ctc_probability"] >= threshold).astype(int)
+
         csv_path = output_path / "ctc_probabilities.csv"
         results_df.to_csv(csv_path, index=False)
         console.print(f"  CSV saved to {csv_path}")
 
-        # Generate UMAP
-        umap_path = output_path / "umap.png"
-        _generate_umap(adata, results_df, umap_path)
+        # Generate UMAP (unless skipped)
+        if not skip_umap:
+            umap_path = output_path / "umap.png"
+            _generate_umap(adata, results_df, umap_path)
+        else:
+            console.print("  UMAP skipped (--skip-umap)")
 
         # Generate summary
         summary_path = output_path / "summary.txt"
@@ -665,5 +675,7 @@ def run_detection(
 
     console.print(f"\n[green]✓[/green] All results written to {output_path}")
     console.print(f"  - ctc_probabilities.csv  ({len(results_df)} cells)")
-    console.print(f"  - umap.png               (4-panel visualization)")
+    if not skip_umap:
+        console.print(f"  - umap.png               (4-panel visualization)")
     console.print(f"  - summary.txt            (clinical summary)")
+    console.print(f"  Threshold: {threshold}")
