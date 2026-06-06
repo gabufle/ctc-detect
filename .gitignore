@@ -39,3 +39,14 @@ data/processed/*.arrow
 test_output/
 test_data/
 cache/
+
+# Model cache — downloaded models should not be committed
+.ctc-detect/
+**/.cache/ctc-detect/
+
+# Large model files
+*.bin
+*.safetensors
+*.pt
+*.pkl
+checkpoints/
