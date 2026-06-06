@@ -422,7 +422,7 @@ def evaluate(
         "--predictions", "-p",
         help=(
             "Path to predictions CSV from 'ctc-detect run'.\n"
-            "Should contain columns: barcode, ctc_probability, predicted_label."
+            "Should contain columns: barcode, ctc_probability, predicted_label, uncertain."
         ),
         rich_help_panel="Input/Output",
     ),
@@ -430,8 +430,9 @@ def evaluate(
         None,
         "--ground-truth", "-g",
         help=(
-            "Optional path to ground-truth CSV with 'barcode' and 'is_ctc' columns.\n"
-            "If provided, AUROC, AUPRC, and confusion matrix will be computed."
+            "Optional path to ground-truth CSV with 'barcode' and 'true_label' columns.\n"
+            "If provided, AUROC, AUPRC, sensitivity, specificity, and confusion\n"
+            "matrix will be computed along with ROC/PR curve plots."
         ),
         rich_help_panel="Input/Output",
     ),
@@ -458,6 +459,16 @@ def evaluate(
 
     Without ground truth: shows score distribution stats and CTC call counts.
     """
+    import numpy as np
+    import pandas as pd
+
+    from ctcdetect.evaluate import (
+        compute_metrics,
+        generate_eval_report,
+        generate_eval_html_report,
+        plot_roc_pr,
+    )
+
     print_banner()
 
     pred_path = validate_input_path(predictions, "Predictions file")
@@ -471,14 +482,14 @@ def evaluate(
     out_path.mkdir(parents=True, exist_ok=True)
 
     # Load predictions
-    import pandas as pd
-    import numpy as np
-
     pred_df = pd.read_csv(pred_path)
-    required_cols = {"barcode", "ctc_probability", "predicted_label"}
+    required_cols = {"barcode", "ctc_probability", "predicted_label", "uncertain"}
     missing = required_cols - set(pred_df.columns)
-    if missing:
-        console.print(f"[red]Error:[/red] Predictions CSV missing columns: {missing}")
+    # Also accept CSVs that have at least the core columns
+    core_cols = {"barcode", "ctc_probability", "predicted_label"}
+    core_missing = core_cols - set(pred_df.columns)
+    if core_missing:
+        console.print(f"[red]Error:[/red] Predictions CSV missing columns: {core_missing}")
         raise SystemExit(1)
 
     console.print(f"Loaded {len(pred_df)} predictions from {pred_path}")
@@ -487,193 +498,94 @@ def evaluate(
         gt_path = validate_input_path(ground_truth, "Ground truth file")
         gt_df = pd.read_csv(gt_path)
 
-        if "barcode" not in gt_df.columns or "is_ctc" not in gt_df.columns:
-            console.print("[red]Error:[/red] Ground truth CSV must have 'barcode' and 'is_ctc' columns.")
+        if "barcode" not in gt_df.columns or "true_label" not in gt_df.columns:
+            console.print("[red]Error:[/red] Ground truth CSV must have 'barcode' and 'true_label' columns.")
             raise SystemExit(1)
 
         # Merge on barcode
-        merged = pred_df.merge(gt_df[["barcode", "is_ctc"]], on="barcode", how="inner")
+        merged = pred_df.merge(gt_df[["barcode", "true_label"]], on="barcode", how="inner")
         console.print(f"Matched {len(merged)} cells with ground truth.")
 
         if len(merged) == 0:
             console.print("[red]Error:[/red] No barcodes matched between predictions and ground truth.")
             raise SystemExit(1)
 
-        y_true = merged["is_ctc"].values.astype(int)
+        y_true = merged["true_label"].values.astype(int)
         y_scores = merged["ctc_probability"].values
 
-        _run_evaluation_with_ground_truth(y_true, y_scores, out_path, threshold)
+        # Compute metrics
+        metrics = compute_metrics(y_true, y_scores, threshold)
+
+        # Print summary
+        console.print(f"\n[bold]Evaluation Results (threshold={threshold})[/bold]")
+        console.print(f"  AUROC:        {metrics['auroc']:.4f}")
+        console.print(f"  AUPRC:        {metrics['auprc']:.4f}")
+        console.print(f"  F1:           {metrics['f1']:.4f}")
+        console.print(f"  Sensitivity:  {metrics['sensitivity']:.4f}")
+        console.print(f"  Specificity:  {metrics['specificity']:.4f}")
+        console.print(f"  PPV:          {metrics['ppv']:.4f}")
+        console.print(f"  NPV:          {metrics['npv']:.4f}")
+        console.print(f"\n  Confusion Matrix (threshold={threshold}):")
+        console.print(f"                 Predicted")
+        console.print(f"                 non-CTC    CTC")
+        console.print(f"  Actual non-CTC  {metrics['tn']:6d}  {metrics['fp']:6d}")
+        console.print(f"  Actual CTC      {metrics['fn']:6d}  {metrics['tp']:6d}")
+
+        # Classification report
+        from sklearn.metrics import classification_report
+        y_pred = (y_scores >= threshold).astype(int)
+        console.print(f"\n{classification_report(y_true, y_pred, target_names=['non-CTC', 'CTC'], zero_division=0)}")
+
+        # Generate reports
+        generate_eval_report(metrics, out_path)
+        console.print(f"  Text report saved to {out_path / 'eval_report.txt'}")
+
+        generate_eval_html_report(metrics, out_path)
+        console.print(f"  HTML report saved to {out_path / 'eval_report.html'}")
+
+        # Generate plots
+        plot_roc_pr(metrics, out_path)
+        console.print(f"  ROC curve saved to {out_path / 'roc.png'}")
+        console.print(f"  PR curve saved to {out_path / 'pr.png'}")
+
+        console.print(f"\n[green]✓[/green] Evaluation complete. Results in {out_path}")
+
     else:
-        _run_evaluation_without_ground_truth(pred_df, out_path, threshold)
+        # No ground truth: show score distribution stats
+        scores = pred_df["ctc_probability"].values
+        n_ctc = int((scores >= threshold).sum())
+        n_non_ctc = int((scores < threshold).sum())
 
+        console.print(f"\n[bold]Score Distribution (no ground truth)[/bold]")
+        console.print(f"  Total cells: {len(pred_df)}")
+        console.print(f"  CTC calls (prob >= {threshold}): {n_ctc} ({n_ctc/len(pred_df)*100:.1f}%)")
+        console.print(f"  Non-CTC calls (prob < {threshold}): {n_non_ctc} ({n_non_ctc/len(pred_df)*100:.1f}%)")
+        console.print(f"\n  Score statistics:")
+        console.print(f"    Mean:   {scores.mean():.4f}")
+        console.print(f"    Median: {np.median(scores):.4f}")
+        console.print(f"    Std:    {scores.std():.4f}")
+        console.print(f"    Min:    {scores.min():.4f}")
+        console.print(f"    Max:    {scores.max():.4f}")
 
-def _run_evaluation_with_ground_truth(y_true, y_scores, out_path, threshold):
-    """Compute full metrics and generate evaluation report with ground truth."""
-    from sklearn.metrics import (
-        roc_auc_score, average_precision_score, f1_score,
-        confusion_matrix, precision_recall_curve, roc_curve,
-        classification_report,
-    )
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
+        # Histogram
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
 
-    # Compute metrics
-    auroc = roc_auc_score(y_true, y_scores)
-    auprc = average_precision_score(y_true, y_scores)
-    y_pred = (y_scores >= threshold).astype(int)
-    f1 = f1_score(y_true, y_pred, zero_division=0)
-    cm = confusion_matrix(y_true, y_pred)
-    tn, fp, fn, tp = cm.ravel()
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.hist(scores, bins=50, color="steelblue", edgecolor="white", alpha=0.8)
+        ax.axvline(x=threshold, color="red", linestyle="--", label=f"Threshold ({threshold})")
+        ax.set_xlabel("CTC Probability")
+        ax.set_ylabel("Number of Cells")
+        ax.set_title("CTC Probability Score Distribution")
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+        hist_path = out_path / "score_distribution.png"
+        fig.savefig(str(hist_path), dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        console.print(f"\n  Score distribution plot saved to {hist_path}")
 
-    sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 0
-    specificity = tn / (tn + fp) if (tn + fp) > 0 else 0
-    ppv = tp / (tp + fp) if (tp + fp) > 0 else 0
-    npv = tn / (tn + fn) if (tn + fn) > 0 else 0
-
-    # Print summary
-    console.print(f"\n[bold]Evaluation Results (threshold={threshold})[/bold]")
-    console.print(f"  AUROC:        {auroc:.4f}")
-    console.print(f"  AUPRC:        {auprc:.4f}")
-    console.print(f"  F1:           {f1:.4f}")
-    console.print(f"  Sensitivity:  {sensitivity:.4f}")
-    console.print(f"  Specificity:  {specificity:.4f}")
-    console.print(f"  PPV:          {ppv:.4f}")
-    console.print(f"  NPV:          {npv:.4f}")
-    console.print(f"\n  Confusion Matrix (threshold={threshold}):")
-    console.print(f"                 Predicted")
-    console.print(f"                 non-CTC    CTC")
-    console.print(f"  Actual non-CTC  {tn:6d}  {fp:6d}")
-    console.print(f"  Actual CTC      {fn:6d}  {tp:6d}")
-
-    # Classification report
-    console.print(f"\n{classification_report(y_true, y_pred, target_names=['non-CTC', 'CTC'], zero_division=0)}")
-
-    # Generate ROC curve
-    fpr, tpr, _ = roc_curve(y_true, y_scores)
-    fig, ax = plt.subplots(figsize=(8, 6))
-    ax.plot(fpr, tpr, "b-", linewidth=2, label=f"AUROC = {auroc:.4f}")
-    ax.plot([0, 1], [0, 1], "k--", alpha=0.5, label="Random")
-    ax.fill_between(fpr, tpr, alpha=0.1, color="blue")
-    ax.set_xlabel("False Positive Rate")
-    ax.set_ylabel("True Positive Rate (Sensitivity)")
-    ax.set_title("ROC Curve")
-    ax.legend(loc="lower right")
-    ax.grid(True, alpha=0.3)
-    roc_path = out_path / "roc_curve.png"
-    fig.savefig(str(roc_path), dpi=150, bbox_inches="tight")
-    plt.close(fig)
-    console.print(f"  ROC curve saved to {roc_path}")
-
-    # Generate PR curve
-    precision, recall, _ = precision_recall_curve(y_true, y_scores)
-    fig, ax = plt.subplots(figsize=(8, 6))
-    ax.plot(recall, precision, "r-", linewidth=2, label=f"AUPRC = {auprc:.4f}")
-    ax.axhline(y=y_true.mean(), color="k", linestyle="--", alpha=0.5, label=f"Baseline = {y_true.mean():.4f}")
-    ax.fill_between(recall, precision, alpha=0.1, color="red")
-    ax.set_xlabel("Recall (Sensitivity)")
-    ax.set_ylabel("Precision (PPV)")
-    ax.set_title("Precision-Recall Curve")
-    ax.legend(loc="upper right")
-    ax.grid(True, alpha=0.3)
-    pr_path = out_path / "pr_curve.png"
-    fig.savefig(str(pr_path), dpi=150, bbox_inches="tight")
-    plt.close(fig)
-    console.print(f"  PR curve saved to {pr_path}")
-
-    # Generate confusion matrix plot
-    fig, ax = plt.subplots(figsize=(8, 6))
-    im = ax.imshow(cm, interpolation="nearest", cmap="Blues")
-    ax.figure.colorbar(im, ax=ax)
-    ax.set(xticks=[0, 1], yticks=[0, 1],
-           xticklabels=["non-CTC", "CTC"], yticklabels=["non-CTC", "CTC"],
-           xlabel="Predicted label", ylabel="True label",
-           title=f"Confusion Matrix (threshold={threshold})")
-    thresh_color = cm.max() / 2.
-    for i in range(2):
-        for j in range(2):
-            ax.text(j, i, format(cm[i, j], "d"),
-                    ha="center", va="center",
-                    color="white" if cm[i, j] > thresh_color else "black",
-                    fontsize=16, fontweight="bold")
-    cm_path = out_path / "confusion_matrix.png"
-    fig.savefig(str(cm_path), dpi=150, bbox_inches="tight")
-    plt.close(fig)
-    console.print(f"  Confusion matrix saved to {cm_path}")
-
-    # Write text report
-    report_lines = [
-        "=" * 50,
-        "CTC-DETECT EVALUATION REPORT",
-        "=" * 50,
-        "",
-        f"Total cells evaluated: {len(y_true)}",
-        f"Ground truth CTCs: {y_true.sum()} ({y_true.mean()*100:.1f}%)",
-        f"Ground truth non-CTCs: {(1-y_true).sum()} ({(1-y_true).mean()*100:.1f}%)",
-        "",
-        f"Threshold: {threshold}",
-        "",
-        "Metrics:",
-        f"  AUROC:        {auroc:.4f}",
-        f"  AUPRC:        {auprc:.4f}",
-        f"  F1:           {f1:.4f}",
-        f"  Sensitivity:  {sensitivity:.4f}",
-        f"  Specificity:  {specificity:.4f}",
-        f"  PPV:          {ppv:.4f}",
-        f"  NPV:          {npv:.4f}",
-        "",
-        f"Confusion Matrix (threshold={threshold}):",
-        f"  TP: {tp}  FP: {fp}",
-        f"  FN: {fn}  TN: {tn}",
-        "",
-        "=" * 50,
-    ]
-    report_path = out_path / "evaluation_report.txt"
-    with open(report_path, "w") as f:
-        f.write("\n".join(report_lines) + "\n")
-    console.print(f"  Evaluation report saved to {report_path}")
-
-    console.print(f"\n[green]✓[/green] Evaluation complete. Results in {out_path}")
-
-
-def _run_evaluation_without_ground_truth(pred_df, out_path, threshold):
-    """Show score distribution stats without ground truth."""
-    import numpy as np
-
-    scores = pred_df["ctc_probability"].values
-    n_ctc = (scores >= threshold).sum()
-    n_non_ctc = (scores < threshold).sum()
-
-    console.print(f"\n[bold]Score Distribution (no ground truth)[/bold]")
-    console.print(f"  Total cells: {len(pred_df)}")
-    console.print(f"  CTC calls (prob >= {threshold}): {n_ctc} ({n_ctc/len(pred_df)*100:.1f}%)")
-    console.print(f"  Non-CTC calls (prob < {threshold}): {n_non_ctc} ({n_non_ctc/len(pred_df)*100:.1f}%)")
-    console.print(f"\n  Score statistics:")
-    console.print(f"    Mean:   {scores.mean():.4f}")
-    console.print(f"    Median: {np.median(scores):.4f}")
-    console.print(f"    Std:    {scores.std():.4f}")
-    console.print(f"    Min:    {scores.min():.4f}")
-    console.print(f"    Max:    {scores.max():.4f}")
-
-    # Histogram
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.hist(scores, bins=50, color="steelblue", edgecolor="white", alpha=0.8)
-    ax.axvline(x=threshold, color="red", linestyle="--", label=f"Threshold ({threshold})")
-    ax.set_xlabel("CTC Probability")
-    ax.set_ylabel("Number of Cells")
-    ax.set_title("CTC Probability Score Distribution")
-    ax.legend()
-    ax.grid(True, alpha=0.3)
-    hist_path = out_path / "score_distribution.png"
-    fig.savefig(str(hist_path), dpi=150, bbox_inches="tight")
-    plt.close(fig)
-    console.print(f"\n  Score distribution plot saved to {hist_path}")
-
-    console.print(f"\n[green]✓[/green] Evaluation complete. Results in {out_path}")
+        console.print(f"\n[green]✓[/green] Evaluation complete. Results in {out_path}")
 
 
 # ---------------------------------------------------------------------------
