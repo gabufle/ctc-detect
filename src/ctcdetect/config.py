@@ -32,6 +32,15 @@ MODEL_REGISTRY = {
     },
 }
 
+# Simple version-to-repo mapping for get_version()
+VERSION_MAP = {
+    "latest": "ctheodoris/Geneformer-V1-10M",
+    "v1.0": "ctheodoris/Geneformer-V1-10M",
+}
+
+# Default model repo ID
+DEFAULT_MODEL = "ctheodoris/Geneformer-V1-10M"
+
 # Cancer-type specific model overrides (future use)
 CANCER_MODELS: dict[str, str] = {
     # e.g. "breast": "organization/geneformer-ctc-breast-v1",
@@ -58,15 +67,37 @@ GENE_MEDIAN = GENEFORMER_DIR / "gene_median_dictionary_gc104M.pkl"
 GENE_MAPPING = GENEFORMER_DIR / "ensembl_mapping_dict_gc104M.pkl"
 
 
+def get_version(version_str: str) -> str:
+    """Resolve a version string to a HuggingFace repo ID.
+
+    Args:
+        version_str: Version alias (e.g. 'latest', 'v1.0').
+
+    Returns:
+        The HuggingFace repo ID for the requested version.
+
+    Raises:
+        ValueError: If the version string is not recognized.
+    """
+    if version_str in VERSION_MAP:
+        return VERSION_MAP[version_str]
+    raise ValueError(
+        f"Unknown model version '{version_str}'. "
+        f"Available versions: {', '.join(sorted(VERSION_MAP))}"
+    )
+
+
 def get_model_cache_path(version: str = "latest") -> Path:
     """Return the local cache path for a given model version.
 
     Creates the parent directory if it does not exist.
+    The cache is organized by version alias, e.g.
+    ``~/.cache/ctc-detect/models/latest/``.
     """
     if version not in MODEL_REGISTRY:
         version = "latest"
-    local_name = MODEL_REGISTRY[version]["local_dir"]
-    path = MODEL_CACHE_DIR / local_name
+    # Use the version string directly as the subdirectory name
+    path = MODEL_CACHE_DIR / version
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -93,7 +124,7 @@ def get_system_info() -> dict:
     # Check for locally available models
     available_models = []
     for alias, meta in MODEL_REGISTRY.items():
-        cache_path = MODEL_CACHE_DIR / meta["local_dir"]
+        cache_path = MODEL_CACHE_DIR / alias
         if cache_path.exists() and any(cache_path.iterdir()):
             available_models.append(alias)
     info["cached_models"] = available_models
