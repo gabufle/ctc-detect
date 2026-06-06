@@ -1,6 +1,7 @@
 """Configuration and paths for CTC-Detect."""
 
 import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -105,21 +106,34 @@ def get_model_cache_path(version: str = "latest") -> Path:
 def get_system_info() -> dict:
     """Return a dict of system information for the ``info`` command."""
     import platform
-    import torch
 
     info = {
         "version": __version__,
         "python": sys.version.split()[0],
         "platform": platform.platform(),
-        "pytorch": torch.__version__,
-        "cuda_available": torch.cuda.is_available(),
+        "pytorch": "not installed",
+        "cuda_available": False,
+        "cuda_version": None,
+        "gpu": None,
     }
-    if torch.cuda.is_available():
-        info["cuda_version"] = torch.version.cuda or "unknown"
-        info["gpu"] = torch.cuda.get_device_name(0)
-    else:
-        info["cuda_version"] = None
-        info["gpu"] = None
+
+    # Try to get the installed package version via importlib.metadata
+    try:
+        from importlib.metadata import version as _pkg_version
+        info["version"] = _pkg_version("ctc-detect")
+    except Exception:
+        pass  # fall back to __version__
+
+    # PyTorch info
+    try:
+        import torch
+        info["pytorch"] = torch.__version__
+        info["cuda_available"] = torch.cuda.is_available()
+        if torch.cuda.is_available():
+            info["cuda_version"] = torch.version.cuda or "unknown"
+            info["gpu"] = torch.cuda.get_device_name(0)
+    except ImportError:
+        pass
 
     # Check for locally available models
     available_models = []
@@ -145,5 +159,19 @@ def get_system_info() -> dict:
     )
     info["checkpoint_available"] = has_checkpoint
     info["checkpoint_path"] = str(CHECKPOINT_DIR)
+
+    # Disk space in model cache directory
+    try:
+        disk = shutil.disk_usage(str(MODEL_CACHE_DIR))
+        free_gb = disk.free / (1024 ** 3)
+        total_gb = disk.total / (1024 ** 3)
+        used_gb = disk.used / (1024 ** 3)
+        info["disk_total_gb"] = round(total_gb, 1)
+        info["disk_used_gb"] = round(used_gb, 1)
+        info["disk_free_gb"] = round(free_gb, 1)
+    except OSError:
+        info["disk_total_gb"] = None
+        info["disk_used_gb"] = None
+        info["disk_free_gb"] = None
 
     return info

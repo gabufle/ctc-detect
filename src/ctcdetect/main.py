@@ -293,6 +293,14 @@ def info():
     cached = info.get("cached_models", [])
     table.add_row("Cached models", ", ".join(cached) if cached else "None")
 
+    # Disk space
+    disk_free = info.get("disk_free_gb")
+    disk_total = info.get("disk_total_gb")
+    if disk_free is not None and disk_total is not None:
+        table.add_row("Disk space (cache)", f"{disk_free} GB free / {disk_total} GB total")
+    else:
+        table.add_row("Disk space (cache)", "N/A")
+
     console.print(table)
     console.print()
     console.print("For documentation, visit: https://github.com/gabufle/ctc-detect")
