@@ -207,29 +207,51 @@ def batch(
 
     success_count = 0
     fail_count = 0
+    failed_samples: list[str] = []
 
-    for i, sample_dir in enumerate(samples, 1):
-        sample_name = sample_dir.name
-        sample_output = output_path / sample_name
-        console.print(f"[bold][{i}/{len(samples)}] Processing: {sample_name}[/bold]")
+    with Progress(
+        TextColumn("[progress.description]{task.description}"),
+        TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Processing samples...", total=len(samples))
 
-        try:
-            run_detection(
-                sample_dir, sample_output,
-                threshold=threshold, skip_umap=skip_umap,
-            )
-            success_count += 1
-            console.print(f"[green]✓[/green] {sample_name} complete\n")
-        except SystemExit as e:
-            fail_count += 1
-            console.print(f"[red]✗[/red] {sample_name} failed (exit code {e.code})\n")
-        except Exception as e:
-            fail_count += 1
-            console.print(f"[red]✗[/red] {sample_name} failed: {e}\n")
+        for sample_dir in samples:
+            sample_name = sample_dir.name
+            sample_output = output_path / sample_name
+            progress.update(task, description=f"[bold]Processing: {sample_name}[/bold]")
+
+            try:
+                sample_output.mkdir(parents=True, exist_ok=True)
+                run_detection(
+                    sample_dir, sample_output,
+                    threshold=threshold, skip_umap=skip_umap,
+                )
+                success_count += 1
+            except SystemExit as e:
+                fail_count += 1
+                failed_samples.append(sample_name)
+                console.print(f"[red]✗[/red] {sample_name} failed (exit code {e.code})")
+            except Exception as e:
+                fail_count += 1
+                failed_samples.append(sample_name)
+                console.print(f"[red]✗[/red] {sample_name} failed: {e}")
+
+            progress.advance(task)
 
     # Summary
+    console.print()
     console.print("=" * 50)
-    console.print(f"Batch complete: {success_count} succeeded, {fail_count} failed")
+    summary_table = Table(title="Batch Processing Summary", show_header=False, box=None)
+    summary_table.add_column("Key", style="bold cyan", min_width=18)
+    summary_table.add_column("Value")
+    summary_table.add_row("Total samples", str(len(samples)))
+    summary_table.add_row("Successful", f"[green]{success_count}[/green]")
+    summary_table.add_row("Failed", f"[red]{fail_count}[/red]" if fail_count > 0 else "0")
+    if failed_samples:
+        summary_table.add_row("Failed samples", ", ".join(failed_samples))
+    console.print(summary_table)
+
     if fail_count > 0:
         console.print("[yellow]Check individual sample outputs for error details.[/yellow]")
         raise SystemExit(1)
