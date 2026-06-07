@@ -31,8 +31,6 @@ Key results on the held-out test set (1,674 cells):
 
 \*Base model metrics use a simple CLS-token norm heuristic with threshold=0.5 and are shown only for comparison. The base model performs barely above random, confirming that fine-tuning is essential.
 
-See `results/validation_report.md` for the full validation report with subgroup analysis, confusion matrices, and honest assessment of limitations.
-
 ## Installation
 
 ### Requirements
@@ -44,14 +42,14 @@ See `results/validation_report.md` for the full validation report with subgroup 
 ### Setup
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/gabufle/ctc-detect.git
 cd ctc-detect
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .
 ```
 
-This installs the package with dependencies: `typer` (CLI), `rich` (terminal output).
+This installs the CLI tool with dependencies: `typer` (CLI), `rich` (terminal output).
 
 For training and evaluation, additional packages are needed:
 
@@ -61,66 +59,97 @@ pip install torch transformers peft datasets scanpy anndata scikit-learn matplot
 
 The Geneformer model itself (~1.2 GB) is downloaded automatically from HuggingFace on first use and cached locally.
 
-## Pipeline Steps
+## CLI Usage
 
-### 1. Data Preparation
-
-Place raw scRNA-seq data (10x Genomics Cell Ranger output) in `data/raw/`. See `data/raw/data_provenance.md` for the exact datasets used and download links.
-
-### 2. Preprocessing
-
-Process raw data through the scanpy pipeline:
-
-- Quality control filtering (gene count thresholds, mitochondrial fraction)
-- Normalization (counts per 10,000 + log1p transform)
-- Gene mapping to Ensembl IDs (required for Geneformer tokenization)
-- Merging of CTC and non-CTC datasets
-
-Output: `data/processed/ctc_merged_processed.h5ad` and `data/processed/splits.json`.
-
-### 3. Tokenization
-
-Convert expression matrices into ranked gene ID sequences:
+### Download the model
 
 ```bash
-python tokenize_data.py
+ctc-detect model download
 ```
 
-Each cell becomes an ordered list of gene IDs, ranked from highest to lowest expression. This is the format Geneformer expects. Output goes to `data/processed/tokenized/` as HuggingFace Datasets.
-
-### 4. Training
-
-Fine-tune Geneformer with LoRA:
+### Validate input data
 
 ```bash
-python train_geneformer.py
+ctc-detect validate --input data/raw/sample.h5ad
 ```
 
-Training uses a 70/15/15 train/val/test split (stratified by CTC label). Class weights are applied to handle the CTC-heavy dataset composition. Training checkpoints are saved to `results/checkpoints/best_model/`.
-
-### 5. Evaluation
-
-Generate metrics and figures:
+### Run detection on a single sample
 
 ```bash
-python evaluate_model.py
-python generate_report.py
+ctc-detect run --input data/raw/sample.h5ad --output results/sample_output/
 ```
 
-Produces:
-- `results/test_outputs/metrics.json` -- all numeric results
-- `results/validation_report.md` -- full written validation report
-- `results/figures/` -- ROC curves, confusion matrix, UMAP visualizations, calibration plot
+Options:
+- `--threshold 0.5` — classification threshold (default: 0.5)
+- `--skip-umap` — skip UMAP visualization (faster)
 
-## How to Run on a New Dataset
+### Batch process multiple samples
 
-1. Place your 10x Genomics data in `data/raw/` with the expected directory structure
-2. Run preprocessing to produce a processed `.h5ad` file
-3. Run tokenization to produce tokenized dataset splits
-4. Run training and evaluation
-5. Update the paths in `src/ctcdetect/config.py` if needed
+```bash
+ctc-detect batch --input-dir data/raw/ --output-dir results/batch_output/
+```
 
-The key input requirement is a cell x gene count matrix with UMI counts. The pipeline handles normalization, tokenization, and label assignment. For CTC detection, you need both positive (CTC-enriched) and negative (healthy PBMC or similar) samples.
+### Evaluate predictions against ground truth
+
+```bash
+ctc-detect evaluate --predictions results/predictions.csv --ground-truth data/labels.csv --output results/eval/
+```
+
+### Model info
+
+```bash
+ctc-detect model info
+ctc-detect model list
+```
+
+## Training
+
+See `notebooks/ctc_detect_colab.ipynb` for the full training workflow (Google Colab, GPU required). The notebook covers:
+
+1. Data loading and inspection
+2. Gene symbol to Ensembl ID conversion
+3. Tokenization for Geneformer
+4. Train/val/test split
+5. LoRA fine-tuning
+6. Evaluation and visualization
+
+To train locally:
+
+```bash
+python src/ctcdetect/train_geneformer.py
+```
+
+## Project Structure
+
+```
+ctc-detect/
+├── src/ctcdetect/          # Source code
+│   ├── main.py             # CLI entry point (Typer)
+│   ├── detect.py           # Inference logic
+│   ├── preprocess.py       # Input format handling
+│   ├── evaluate.py         # Metrics computation
+│   ├── report.py           # Report generation
+│   ├── visualize.py        # UMAP plots
+│   ├── config.py           # Model registry and config
+│   ├── utils.py            # Shared utilities
+│   └── train_geneformer.py # Training script
+├── tests/                  # Test suite (98 tests, 85% coverage)
+│   ├── test_main.py
+│   ├── test_detect.py
+│   ├── test_preprocess.py
+│   ├── test_evaluate.py
+│   ├── test_report.py
+│   ├── test_visualize.py
+│   ├── test_extra.py
+│   ├── test_main_mocked.py
+│   └── conftest.py
+├── notebooks/               # Jupyter notebooks
+│   └── ctc_detect_colab.ipynb
+├── .github/workflows/      # CI/CD (lint, test, typecheck)
+├── pyproject.toml          # Package config and dependencies
+├── Makefile                # Test runner targets
+└── README.md
+```
 
 ## Data Sources and Citations
 
@@ -136,19 +165,6 @@ The key input requirement is a cell x gene count matrix with UMI counts. The pip
 - **Geneformer:** Theodoris CV et al. "Transfer learning enables predictions in network biology." *Nature*, 2023. HuggingFace: `ctheodoris/Geneformer`.
 
 - **LoRA:** Hu EJ et al. "LoRA: Low-Rank Adaptation of Large Language Models." *ICLR*, 2022.
-
-## Results Figures
-
-All figures are in `results/figures/`:
-
-| File | What it Shows |
-|------|--------------|
-| `roc_pr_curves.png` | ROC curve and Precision-Recall curve for both base and fine-tuned models |
-| `confusion_matrix.png` | Confusion matrix of the fine-tuned model at threshold=0.5 |
-| `calibration.png` | Calibration plot and score distribution |
-| `umap_overview.png` | 4-panel UMAP: predictions, ground truth, uncertainty, EpCAM status |
-| `umap_ctc_probability.png` | UMAP colored by predicted CTC probability |
-| `umap_epcam_status.png` | UMAP colored by EpCAM expression status |
 
 ## Honest Limitations
 
@@ -167,8 +183,6 @@ All figures are in `results/figures/`:
 7. **No probability calibration.** Predicted scores have not been calibrated with temperature scaling or Platt scaling, so they should not be interpreted as true probabilities.
 
 8. **UMAP is computed on expression, not embeddings.** The UMAP visualizations show gene expression space (scanpy pipeline: normalize, log1p, HVG 2000, PCA 30, neighbors, UMAP), not the Geneformer embedding space. Model predictions are overlaid after the fact.
-
-See `METHODS.md` for detailed explanations of the methods.
 
 ## License
 
