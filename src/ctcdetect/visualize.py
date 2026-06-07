@@ -70,12 +70,12 @@ def generate_umap(
     ax = axes[0, 0]
     valid = ~np.isnan(umap_probs)
     if valid.any():
-        sc = ax.scatter(
+        scatter = ax.scatter(
             umap_coords[valid, 0], umap_coords[valid, 1],
             c=umap_probs[valid], cmap="RdYlBu_r", s=3, alpha=0.7,
             vmin=0, vmax=1,
         )
-        plt.colorbar(sc, ax=ax, label="CTC Probability")
+        plt.colorbar(scatter, ax=ax, label="CTC Probability")
     ax.scatter(
         umap_coords[~valid, 0], umap_coords[~valid, 1],
         c="lightgray", s=1, alpha=0.3,
