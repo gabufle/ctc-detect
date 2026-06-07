@@ -1,6 +1,5 @@
 """Configuration and paths for CTC-Detect."""
 
-import os
 import shutil
 import sys
 from pathlib import Path

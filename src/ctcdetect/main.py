@@ -5,10 +5,6 @@ produced by 10x Genomics Cell Ranger. Outputs per-cell CTC probability
 scores, UMAP visualizations, and clinical summary reports.
 """
 
-import os
-import sys
-from pathlib import Path
-
 import typer
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
@@ -17,7 +13,6 @@ from rich.table import Table
 from ctcdetect.utils import validate_input_path, validate_output_path, print_banner
 from ctcdetect.config import (
     MODEL_REGISTRY,
-    DEFAULT_MODEL,
     get_version,
     get_model_cache_path,
     get_system_info,
@@ -513,8 +508,6 @@ def evaluate(
 
     # Load predictions
     pred_df = pd.read_csv(pred_path)
-    required_cols = {"barcode", "ctc_probability", "predicted_label", "uncertain"}
-    missing = required_cols - set(pred_df.columns)
     # Also accept CSVs that have at least the core columns
     core_cols = {"barcode", "ctc_probability", "predicted_label"}
     core_missing = core_cols - set(pred_df.columns)
@@ -556,8 +549,8 @@ def evaluate(
         console.print(f"  PPV:          {metrics['ppv']:.4f}")
         console.print(f"  NPV:          {metrics['npv']:.4f}")
         console.print(f"\n  Confusion Matrix (threshold={threshold}):")
-        console.print(f"                 Predicted")
-        console.print(f"                 non-CTC    CTC")
+        console.print("                 Predicted")
+        console.print("                 non-CTC    CTC")
         console.print(f"  Actual non-CTC  {metrics['tn']:6d}  {metrics['fp']:6d}")
         console.print(f"  Actual CTC      {metrics['fn']:6d}  {metrics['tp']:6d}")
 
@@ -586,11 +579,11 @@ def evaluate(
         n_ctc = int((scores >= threshold).sum())
         n_non_ctc = int((scores < threshold).sum())
 
-        console.print(f"\n[bold]Score Distribution (no ground truth)[/bold]")
+        console.print("\n[bold]Score Distribution (no ground truth)[/bold]")
         console.print(f"  Total cells: {len(pred_df)}")
         console.print(f"  CTC calls (prob >= {threshold}): {n_ctc} ({n_ctc/len(pred_df)*100:.1f}%)")
         console.print(f"  Non-CTC calls (prob < {threshold}): {n_non_ctc} ({n_non_ctc/len(pred_df)*100:.1f}%)")
-        console.print(f"\n  Score statistics:")
+        console.print("\n  Score statistics:")
         console.print(f"    Mean:   {scores.mean():.4f}")
         console.print(f"    Median: {np.median(scores):.4f}")
         console.print(f"    Std:    {scores.std():.4f}")

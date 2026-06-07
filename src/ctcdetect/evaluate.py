@@ -5,7 +5,6 @@ for evaluating CTC detection predictions against ground truth.
 """
 
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 

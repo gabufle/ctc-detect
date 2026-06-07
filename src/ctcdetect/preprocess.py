@@ -4,9 +4,7 @@ Handles reading and validating various single-cell RNA-seq input formats
 produced by Cell Ranger and other pipelines.
 """
 
-import os
 from pathlib import Path
-from typing import Optional
 
 import scanpy as sc
 import pandas as pd

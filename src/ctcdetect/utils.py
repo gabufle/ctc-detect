@@ -1,8 +1,6 @@
 """Shared utilities for CTC-Detect CLI."""
 
-import os
 from pathlib import Path
-from typing import Optional
 
 from rich.console import Console
 

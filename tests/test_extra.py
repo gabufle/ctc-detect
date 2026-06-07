@@ -43,8 +43,11 @@ def test_run_command_help():
     """Run --help should work."""
     result = runner.invoke(app, ["run", "--help"])
     assert result.exit_code == 0
-    assert "--input" in result.output
-    assert "--output" in result.output
+    # Strip ANSI escape codes for assertion
+    import re
+    clean = re.sub(r'\x1b\[[0-9;]*m', '', result.output)
+    assert "--input" in clean
+    assert "--output" in clean
 
 
 # ── Batch command tests ──
@@ -63,7 +66,9 @@ def test_batch_command_help():
     """Batch --help should work."""
     result = runner.invoke(app, ["batch", "--help"])
     assert result.exit_code == 0
-    assert "--input-dir" in result.output
+    import re
+    clean = re.sub(r'\x1b\[[0-9;]*m', '', result.output)
+    assert "--input-dir" in clean
 
 
 # ── Validate command tests ──
@@ -100,7 +105,9 @@ def test_evaluate_command_help():
     """Evaluate --help should work."""
     result = runner.invoke(app, ["evaluate", "--help"])
     assert result.exit_code == 0
-    assert "--predictions" in result.output
+    import re
+    clean = re.sub(r'\x1b\[[0-9;]*m', '', result.output)
+    assert "--predictions" in clean
 
 
 def test_evaluate_command_with_threshold(sample_predictions_csv, sample_ground_truth_csv, temp_output_dir):

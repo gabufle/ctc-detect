@@ -5,7 +5,6 @@ threshold-based CTC calls, and QC metrics.
 """
 
 from pathlib import Path
-from typing import Optional
 
 import pandas as pd
 from rich.console import Console

@@ -5,7 +5,6 @@ Uses scanpy's UMAP implementation on expression data.
 """
 
 from pathlib import Path
-from typing import Optional
 
 import scanpy as sc
 import pandas as pd
@@ -14,7 +13,6 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
-import seaborn as sns
 from rich.console import Console
 
 console = Console()

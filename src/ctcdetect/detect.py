@@ -6,7 +6,6 @@ expression data and outputs per-cell CTC probability scores.
 
 import os
 import pickle
-import sys
 import tempfile
 from pathlib import Path
 from typing import Optional
@@ -14,7 +13,6 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 import scanpy as sc
-import scipy.sparse as sp
 import torch
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskID
@@ -144,7 +142,7 @@ def _load_model(model_dir: Path):
             possible_bases = [
                 Path(peft_config.base_model_name_or_path),
                 FINETUNED_DIR.parent / "Geneformer-V1-10M",
-                Path.home() / ".cache" / "huggingface" / "hub" / f"models--ctheodoris--Geneformer",
+                Path.home() / ".cache" / "huggingface" / "hub" / "models--ctheodoris--Geneformer",
             ]
             for base_path in possible_bases:
                 if base_path.exists():
@@ -425,7 +423,6 @@ def _generate_umap(adata: sc.AnnData, results_df: pd.DataFrame, output_path: Pat
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     from matplotlib.colors import ListedColormap
-    import seaborn as sns
 
     console.print("  Computing UMAP on expression data...")
 
@@ -676,6 +673,6 @@ def run_detection(
     console.print(f"\n[green]✓[/green] All results written to {output_path}")
     console.print(f"  - ctc_probabilities.csv  ({len(results_df)} cells)")
     if not skip_umap:
-        console.print(f"  - umap.png               (4-panel visualization)")
-    console.print(f"  - summary.txt            (clinical summary)")
+        console.print("  - umap.png               (4-panel visualization)")
+    console.print("  - summary.txt            (clinical summary)")
     console.print(f"  Threshold: {threshold}")
