@@ -1,4 +1,120 @@
-# Raw data files - do not commit
+# Data and results - keep repo lightweight
+data/
+!data/raw/
+!data/raw/.gitkeep
+results/
+!results/
+!results/.gitkeep
+notebooks/
+!notebooks/
+!notebooks/.gitkeep
+models/
+!models/
+!models/.gitkeep
+checkpoints/
+!checkpoints/
+!checkpoints/.gitkeep
+
+# Logs
+*.log
+logs/
+
+# Redundant with pyproject.toml
+requirements.txt
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyright
+pyrightconfig.json
+
+# Large model files
+*.bin
+*.safetensors
+*.pt
+*.pkl
+
+# Model cache
+.ctc-detect/
+**/.cache/ctc-detect/
+
+# Geneformer
+Geneformer/
+
+# Raw data formats
 *.h5
 *.h5ad
 *.mtx
@@ -11,43 +127,10 @@
 *.rds
 *.rds.gz
 
-# Data directories
-data/raw/
-notebooks/.ipynb_checkpoints/
-
-# Python
-__pycache__/
-*.pyc
-*.pyo
-.venv/
-venv/
-
-# IDE
-.vscode/
-.idea/
-
-# OS
-.DS_Store
-Thumbs.db
-Geneformer/
-*.egg-info/
-data/processed/tokenized*
-data/processed/*.h5ad
-data/processed/*.arrow
-
 # Test outputs
 test_output/
 test_data/
 cache/
 
-# Model cache — downloaded models should not be committed
-.ctc-detect/
-**/.cache/ctc-detect/
-
-# Large model files
-*.bin
-*.safetensors
-*.pt
-*.pkl
-checkpoints/
-.coverage\nhtmlcov/\n.venv/\n__pycache__/\n*.egg-info/\ndata/\nGeneformer/\nresults/\n.ipynb_checkpoints/\n
+# Stress test outputs
+results.zip
