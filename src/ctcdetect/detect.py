@@ -115,6 +115,62 @@ def _resolve_model_dir() -> Path:
     raise SystemExit(1)
 
 
+def _validate_adapter_config(model_dir: Path) -> dict:
+    """Validate that ``model_dir`` holds a well-formed PEFT/LoRA adapter config.
+
+    The fine-tuned CTC model is a LoRA adapter, so ``adapter_config.json`` must
+    exist and describe a LoRA adapter with a base model. If it is missing,
+    unreadable, or not a LoRA adapter, fail loudly rather than silently loading
+    the wrong weights (e.g. the base Geneformer, which scores near random).
+
+    Args:
+        model_dir: Directory expected to contain a PEFT/LoRA adapter.
+
+    Returns:
+        The parsed adapter config as a dict.
+
+    Raises:
+        SystemExit: If the adapter config is missing or malformed.
+    """
+    import json
+
+    adapter_config = model_dir / "adapter_config.json"
+    if not adapter_config.exists():
+        console.print(
+            f"[red]Error:[/red] Expected a PEFT/LoRA adapter config at {adapter_config}, "
+            "but none was found."
+        )
+        console.print(
+            "The CTC model must be a LoRA adapter (adapter_config.json + adapter weights). "
+            "Point at a fine-tuned adapter directory, or retrain."
+        )
+        raise SystemExit(1)
+
+    try:
+        with open(adapter_config) as f:
+            cfg = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        console.print(f"[red]Error:[/red] Could not read adapter config {adapter_config}: {e}")
+        raise SystemExit(1)
+
+    peft_type = str(cfg.get("peft_type", "")).upper()
+    if peft_type != "LORA":
+        console.print(
+            f"[red]Error:[/red] {adapter_config} is not a LoRA adapter "
+            f"(peft_type={cfg.get('peft_type')!r}, expected 'LORA')."
+        )
+        raise SystemExit(1)
+
+    if not cfg.get("base_model_name_or_path"):
+        console.print(
+            f"[red]Error:[/red] {adapter_config} is missing 'base_model_name_or_path'; "
+            "cannot locate the base Geneformer model for the adapter."
+        )
+        raise SystemExit(1)
+
+    return cfg
+
+
 def _load_model(model_dir: Path):
     """Load the fine-tuned Geneformer model.
 
@@ -131,7 +187,8 @@ def _load_model(model_dir: Path):
     adapter_config = model_dir / "adapter_config.json"
 
     if adapter_config.exists():
-        # PEFT adapter: load base model + adapter
+        # PEFT adapter: validate the config, then load base model + adapter
+        _validate_adapter_config(model_dir)
         console.print("  Loading PEFT/LoRA adapter model...")
         peft_config = PeftConfig.from_pretrained(str(model_dir))
         base_model_name = peft_config.base_model_name_or_path
@@ -161,8 +218,20 @@ def _load_model(model_dir: Path):
             base_model_name, config=config
         )
         model = PeftModel.from_pretrained(base_model, str(model_dir))
+        if not isinstance(model, PeftModel):
+            console.print(
+                "[red]Error:[/red] Loaded model is not a PeftModel despite an adapter "
+                "config being present. The adapter may be incompatible with the installed "
+                "peft version."
+            )
+            raise SystemExit(1)
     else:
-        # Full model checkpoint
+        # No adapter_config.json: this is a full checkpoint, NOT a LoRA adapter.
+        console.print(
+            "[yellow]Warning:[/yellow] No adapter_config.json found — loading a full "
+            "checkpoint, not a PEFT/LoRA adapter. If you expected the fine-tuned CTC "
+            "adapter, this may be the base Geneformer model, which scores near random."
+        )
         console.print("  Loading full model checkpoint...")
         config = AutoConfig.from_pretrained(str(model_dir))
         config.num_labels = 2
