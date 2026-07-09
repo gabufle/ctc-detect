@@ -70,7 +70,7 @@ def test_detect_format_tsv(tmp_path):
     tsv_path.write_text("gene1\tgene2\ncell1\t1.0\t2.0\n")
 
     fmt = detect_format(tsv_path)
-    assert fmt == "csv"
+    assert fmt == "tsv"
 
 
 def test_detect_format_unknown(tmp_path):

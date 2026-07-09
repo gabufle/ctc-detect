@@ -262,7 +262,7 @@ def load_data(input_path: Path) -> sc.AnnData:
         adata.obs_names = df.columns.astype(str)
     elif fmt == "txt":
         # Text file genes x cells matrix
-        df = pd.read_csv(input_path, index_col=0, sep="\s+")
+        df = pd.read_csv(input_path, index_col=0, sep=r"\s+")
         adata = sc.AnnData(df.T)  # Transpose to cells x genes
         adata.var_names = df.index.astype(str)
         adata.obs_names = df.columns.astype(str)
