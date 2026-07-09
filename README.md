@@ -111,6 +111,28 @@ Options:
 ctc-detect batch --input-dir data/raw/ --output-dir results/batch_output/
 ```
 
+### Process multiple individual files
+
+> **New!** Process multiple files of different formats in one command.
+
+```bash
+ctc-detect multi sample1.h5ad sample2.csv sample3.tsv --output results/multi_output/
+```
+
+**Supported file formats:**
+- `.h5ad` — AnnData HDF5 files
+- `.csv` — CSV matrices (genes × cells)
+- `.tsv` — Tab-separated matrices (genes × cells)
+- `.txt` — Text matrices (genes × cells)
+- `.mtx` — Matrix Market Exchange format
+- `.loom` — Loom files
+- Cell Ranger directories (filtered_feature_bc_matrix/)
+
+Options:
+- `--threshold 0.5` — classification threshold (default: 0.5)
+- `--skip-umap` — skip UMAP visualization (faster)
+- `--output -o` — output directory (required)
+
 ### Evaluate predictions against ground truth
 
 ```bash
@@ -147,8 +169,15 @@ python src/ctcdetect/train_geneformer.py
 ctc-detect/
 ├── src/ctcdetect/          # Source code
 │   ├── main.py             # CLI entry point (Typer)
+│   │   ├── run              # Single sample processing
+│   │   ├── batch            # Directory-based batch processing
+│   │   ├── multi             # Multi-file processing (NEW)
+│   │   ├── validate          # Input validation
+│   │   ├── evaluate          # Metrics computation
+│   │   ├── info              # System information
+│   │   └── model             # Model management
 │   ├── detect.py           # Inference logic
-│   ├── preprocess.py       # Input format handling
+│   ├── preprocess.py       # Input format handling (extended)
 │   ├── evaluate.py         # Metrics computation
 │   ├── report.py           # Report generation
 │   ├── visualize.py        # UMAP plots

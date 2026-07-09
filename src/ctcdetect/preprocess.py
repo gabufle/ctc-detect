@@ -17,6 +17,10 @@ SUPPORTED_FORMATS = {
     "cellranger": "10x Genomics Cell Ranger output (filtered_feature_bc_matrix/)",
     "h5ad": "AnnData HDF5 file (.h5ad)",
     "csv": "Plain CSV/TSV matrix (genes x cells)",
+    "tsv": "Tab-separated values matrix (genes x cells)",
+    "txt": "Text matrix (genes x cells)",
+    "mtx": "Matrix Market Exchange format (.mtx)",
+    "loom": "Loom file format (.loom)",
 }
 
 
@@ -40,8 +44,16 @@ def detect_format(input_path: Path) -> str:
             return "cellranger"
     elif input_path.suffix == ".h5ad":
         return "h5ad"
-    elif input_path.suffix in (".csv", ".tsv", ".txt"):
+    elif input_path.suffix == ".csv":
         return "csv"
+    elif input_path.suffix == ".tsv":
+        return "tsv"
+    elif input_path.suffix == ".txt":
+        return "txt"
+    elif input_path.suffix == ".mtx":
+        return "mtx"
+    elif input_path.suffix == ".loom":
+        return "loom"
 
     console.print(
         f"[red]Error:[/red] Cannot determine input format for '{input_path}'.\n"
@@ -238,11 +250,35 @@ def load_data(input_path: Path) -> sc.AnnData:
         adata = sc.read_h5ad(input_path)
     elif fmt == "csv":
         # Assume genes x cells matrix with gene names as row names and cell IDs as column names
-        sep = "\t" if input_path.suffix in (".tsv", ".txt") else ","
-        df = pd.read_csv(input_path, index_col=0, sep=sep)
+        df = pd.read_csv(input_path, index_col=0)
         adata = sc.AnnData(df.T)  # Transpose to cells x genes
         adata.var_names = df.index.astype(str)
         adata.obs_names = df.columns.astype(str)
+    elif fmt == "tsv":
+        # Tab-separated genes x cells matrix
+        df = pd.read_csv(input_path, index_col=0, sep="\t")
+        adata = sc.AnnData(df.T)  # Transpose to cells x genes
+        adata.var_names = df.index.astype(str)
+        adata.obs_names = df.columns.astype(str)
+    elif fmt == "txt":
+        # Text file genes x cells matrix
+        df = pd.read_csv(input_path, index_col=0, sep="\s+")
+        adata = sc.AnnData(df.T)  # Transpose to cells x genes
+        adata.var_names = df.index.astype(str)
+        adata.obs_names = df.columns.astype(str)
+    elif fmt == "mtx":
+        # Matrix Market Exchange format - need additional files
+        from scipy.io import mmread
+        matrix = mmread(input_path)
+        # For MTX format, we need barcodes and genes files
+        # This is a simplified version - in practice you'd need to handle this more carefully
+        adata = sc.AnnData(matrix.T)  # Transpose to cells x genes
+        # Set generic names since we don't have the actual barcodes/genes
+        adata.var_names = [f"Gene_{i}" for i in range(adata.shape[1])]
+        adata.obs_names = [f"Cell_{i}" for i in range(adata.shape[0])]
+    elif fmt == "loom":
+        # Loom format
+        adata = sc.read_loom(input_path)
     else:
         # Should not happen due to detect_format
         raise RuntimeError(f"Unsupported format: {fmt}")

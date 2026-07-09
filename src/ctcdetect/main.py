@@ -6,6 +6,7 @@ scores, UMAP visualizations, and clinical summary reports.
 """
 
 import typer
+from typing import List, Optional
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
@@ -87,6 +88,15 @@ def run(
         "--skip-umap",
         help="Skip UMAP visualization for faster runs.",
         rich_help_panel="Model Options",
+    ),
+    files: Optional[List[str]] = typer.Option(
+        None,
+        "--files", "-f",
+        help=(
+            "Multiple input files to process together.\n"
+            "Can be used instead of --input to process multiple samples."
+        ),
+        rich_help_panel="Input/Output",
     ),
 ):
     """Run CTC detection on a single sample.
@@ -250,6 +260,64 @@ def batch(
     if fail_count > 0:
         console.print("[yellow]Check individual sample outputs for error details.[/yellow]")
         raise SystemExit(1)
+
+
+# ---------------------------------------------------------------------------
+# MULTI command
+# ---------------------------------------------------------------------------
+@app.command()
+def multi(
+    files: List[str] = typer.Argument(
+        ...,
+        help=(
+            "List of input files to process.\n"
+            "Can be Cell Ranger directories, .h5ad files, CSV/TSV files, or other supported formats."
+        ),
+    ),
+    output: str = typer.Option(
+        ...,
+        "--output", "-o",
+        help=(
+            "Path to output directory.\n"
+            "Results for all files will be written to this directory."
+        ),
+        rich_help_panel="Input/Output",
+    ),
+    threshold: float = typer.Option(
+        0.5,
+        "--threshold", "-t",
+        help="Probability threshold for CTC calls (default 0.5).",
+        rich_help_panel="Model Options",
+    ),
+    skip_umap: bool = typer.Option(
+        False,
+        "--skip-umap",
+        help="Skip UMAP visualization for faster runs.",
+        rich_help_panel="Model Options",
+    ),
+):
+    """Run CTC detection on multiple individual files.
+
+    Process multiple input files in a single command. Each file will be
+    processed separately and results will be saved in individual subdirectories.
+    Supports all file formats that the 'run' command supports.
+    """
+    print_banner()
+    input_paths = [validate_input_path(f, "Input file") for f in files]
+    output_path = validate_output_path(output)
+    output_path.mkdir(parents=True, exist_ok=True)
+    
+    console.print(f"Processing {len(input_paths)} files...")
+    
+    from ctcdetect.detect import run_detection
+    
+    for i, input_path in enumerate(input_paths, 1):
+        console.print(f"\n[bold]Processing file {i}/{len(input_paths)}: {input_path.name}[/bold]")
+        sample_output = output_path / f"sample_{i}_{input_path.stem}"
+        sample_output.mkdir(exist_ok=True)
+        run_detection(input_path, sample_output, threshold=threshold, skip_umap=skip_umap)
+    
+    console.print(f"\n[green]✓[/green] All {len(input_paths)} samples processed. Results in {output_path}")
 
 
 # ---------------------------------------------------------------------------
