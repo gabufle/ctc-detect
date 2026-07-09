@@ -58,20 +58,36 @@ def load_counts(counts_path: Path):
     return adata
 
 
-def labels_from_file(adata, labels_path, barcode_col, label_col, positive_values):
-    labels_df = pd.read_csv(labels_path).set_index(barcode_col)
+def labels_from_file(adata, labels_path, barcode_col, label_col, positive_values, negative_values):
+    labels_df = pd.read_csv(labels_path, sep=None, engine="python").set_index(barcode_col)
 
     missing = set(adata.obs_names) - set(labels_df.index)
     if missing:
-        print(
-            f"Warning: {len(missing)} cells in counts matrix have no label — dropping them"
-        )
+        print(f"Warning: {len(missing)} cells in counts matrix have no label — dropping them")
         adata = adata[adata.obs_names.isin(labels_df.index)].copy()
 
     labels_df = labels_df.loc[adata.obs_names]
-    raw_labels = labels_df[label_col].astype(str).str.lower()
+    raw_labels = labels_df[label_col].astype(str).str.lower().str.strip()
     positive_set = {v.strip().lower() for v in positive_values.split(",")}
-    true_label = raw_labels.isin(positive_set).astype(int)
+    negative_set = {v.strip().lower() for v in negative_values.split(",")} if negative_values else None
+
+    if negative_set is None:
+        # Original behavior: everything not positive is negative (fine when the
+        # label column genuinely only has two categories)
+        true_label = raw_labels.isin(positive_set).astype(int)
+        return adata, true_label
+
+    is_pos = raw_labels.isin(positive_set)
+    is_neg = raw_labels.isin(negative_set)
+    excluded = ~(is_pos | is_neg)
+    if excluded.sum():
+        print(f"Excluding {excluded.sum()} cells whose label matched neither --positive-values "
+              f"nor --negative-values: {sorted(raw_labels[excluded].unique())}")
+        adata = adata[~excluded].copy()
+        is_pos = is_pos[~excluded]
+
+    true_label = is_pos.astype(int)
+    true_label.index = adata.obs_names
     return adata, true_label
 
 
@@ -80,20 +96,27 @@ def labels_from_colname_regex(adata, config_path):
 
     Config format:
     {
-      "positive_patterns": ["^LM2", "^Br16(?!_.*(Bcell|Tcell|NK|Mono|Gra|plt))", "^CD_Br16"],
-      "negative_patterns": ["(Bcell|Tcell|NK|Mono|Gra|plts?)$"],
-      "unmatched": "exclude"   // or "error"
+      "positive_patterns": ["^LM2"],       // optional if unmatched is "positive" or "negative"
+      "negative_patterns": ["(Bcells?|Tcells?|NK|Mono|Gra|plts?)$"],
+      "unmatched": "exclude" | "error" | "positive" | "negative"
     }
 
     Patterns are checked with re.search, case-insensitive. A name matching
-    a negative pattern is label=0; matching a positive pattern (and no
-    negative pattern) is label=1. Anything matching neither (or both) is
-    "unmatched" and handled per the `unmatched` setting.
+    a negative pattern (and no positive pattern) is label=0; matching a
+    positive pattern (and no negative pattern) is label=1. Anything
+    matching neither is "unmatched", handled per `unmatched`:
+      - "exclude":  drop the cell (default, safest but loses data)
+      - "error":    raise, forcing you to update the patterns
+      - "positive"/"negative": assign that label by default — useful when
+         one class (e.g. WBC subtypes) has a small, enumerable naming
+         vocabulary and everything else safely belongs to the other class,
+         so you don't have to whack-a-mole enumerate every positive-class
+         prefix (e.g. every patient ID).
     """
     with open(config_path) as f:
         config = json.load(f)
 
-    pos_patterns = [re.compile(p, re.IGNORECASE) for p in config["positive_patterns"]]
+    pos_patterns = [re.compile(p, re.IGNORECASE) for p in config.get("positive_patterns", [])]
     neg_patterns = [re.compile(p, re.IGNORECASE) for p in config["negative_patterns"]]
     unmatched_policy = config.get("unmatched", "exclude")
 
@@ -110,15 +133,31 @@ def labels_from_colname_regex(adata, config_path):
             unmatched.append(name)
 
     if unmatched:
-        print(f"WARNING: {len(unmatched)} cell names matched neither/both patterns:")
+        if not pos_patterns and unmatched_policy in ("positive", "negative"):
+            print(f"{len(unmatched)} cells didn't match a negative pattern, so they're getting the "
+                  f"default label (unmatched='{unmatched_policy}'). This is expected since "
+                  f"positive_patterns is empty by design. Spot-checking a sample of them:")
+        else:
+            print(f"NOTE: {len(unmatched)} cell names matched neither/both patterns:")
         for n in unmatched[:20]:
             print(f"  {n}")
+        if len(unmatched) > 20:
+            print(f"  ... and {len(unmatched) - 20} more")
         if unmatched_policy == "error":
             raise ValueError(
                 f"{len(unmatched)} unmatched cell names and unmatched policy is 'error'. "
                 f"Update the regex patterns in {config_path} to cover them."
             )
-        print(f"Excluding these {len(unmatched)} cells (unmatched policy = 'exclude').")
+        elif unmatched_policy == "exclude":
+            print(f"Excluding these {len(unmatched)} cells (unmatched policy = 'exclude').")
+        elif unmatched_policy in ("positive", "negative"):
+            default_label = 1 if unmatched_policy == "positive" else 0
+            print(f"Assigning default label={default_label} to these cells (unmatched policy = '{unmatched_policy}'). "
+                  f"Spot-check a few of the printed names above to confirm this default is actually correct for them.")
+            for n in unmatched:
+                labels[n] = default_label
+        else:
+            raise ValueError(f"Unknown unmatched policy: {unmatched_policy}")
 
     keep = [n for n in adata.obs_names if n in labels]
     adata = adata[adata.obs_names.isin(keep)].copy()
@@ -127,34 +166,24 @@ def labels_from_colname_regex(adata, config_path):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
-    )
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--counts", required=True)
-    parser.add_argument(
-        "--label-source", choices=["file", "colname-regex"], required=True
-    )
+    parser.add_argument("--label-source", choices=["file", "colname-regex"], required=True)
     parser.add_argument("--output-dir", required=True)
 
     # file-based label args
-    parser.add_argument(
-        "--labels", help="[file mode] Path to CSV with barcode + label columns"
-    )
-    parser.add_argument(
-        "--barcode-col", default="barcode", help="[file mode] Barcode column name"
-    )
-    parser.add_argument(
-        "--label-col", default="label", help="[file mode] Label column name"
-    )
-    parser.add_argument(
-        "--positive-values",
-        help="[file mode] Comma-separated label values counted as positive",
-    )
+    parser.add_argument("--labels", help="[file mode] Path to CSV with barcode + label columns")
+    parser.add_argument("--barcode-col", default="barcode", help="[file mode] Barcode column name")
+    parser.add_argument("--label-col", default="label", help="[file mode] Label column name")
+    parser.add_argument("--positive-values", help="[file mode] Comma-separated label values counted as positive")
+    parser.add_argument("--negative-values", default=None,
+                         help="[file mode] Comma-separated label values counted as negative. "
+                              "If omitted, everything not in --positive-values is treated as negative "
+                              "(fine for a genuinely binary label column). If provided, anything matching "
+                              "neither list is excluded rather than silently defaulted to negative.")
 
     # regex-based label args
-    parser.add_argument(
-        "--label-config", help="[colname-regex mode] Path to JSON config of regex rules"
-    )
+    parser.add_argument("--label-config", help="[colname-regex mode] Path to JSON config of regex rules")
 
     args = parser.parse_args()
 
@@ -167,21 +196,29 @@ def main():
         if not (args.labels and args.positive_values):
             parser.error("--label-source file requires --labels and --positive-values")
         adata, true_label = labels_from_file(
-            adata, args.labels, args.barcode_col, args.label_col, args.positive_values
+            adata, args.labels, args.barcode_col, args.label_col, args.positive_values, args.negative_values
         )
     else:
         if not args.label_config:
             parser.error("--label-source colname-regex requires --label-config")
         adata, true_label = labels_from_colname_regex(adata, args.label_config)
 
-    print(
-        f"Label distribution: {true_label.sum()} positive / {(true_label == 0).sum()} negative "
-        f"({true_label.mean() * 100:.2f}% prevalence)"
-    )
+    print(f"Label distribution: {true_label.sum()} positive / {(true_label == 0).sum()} negative "
+          f"({true_label.mean()*100:.2f}% prevalence)")
+
+    # Bake labels into adata.obs so this h5ad is a drop-in match for what the
+    # training/eval notebook expects (adata.obs['is_ctc']), not just a
+    # separate ground_truth.csv. epcam_status isn't available for most
+    # external datasets, so it's filled with 'unknown' rather than omitted —
+    # if your notebook filters or stratifies on epcam_status, that filter
+    # will need to explicitly handle 'unknown' rather than assume it's absent.
+    adata.obs["is_ctc"] = true_label.values.astype(int)
+    if "epcam_status" not in adata.obs.columns:
+        adata.obs["epcam_status"] = "unknown"
 
     h5ad_path = out_dir / "data.h5ad"
     adata.write_h5ad(str(h5ad_path))
-    print(f"Wrote {h5ad_path}")
+    print(f"Wrote {h5ad_path} (includes adata.obs['is_ctc'] and adata.obs['epcam_status'])")
 
     gt_df = pd.DataFrame({"barcode": adata.obs_names, "true_label": true_label.values})
     gt_path = out_dir / "ground_truth.csv"
@@ -189,9 +226,7 @@ def main():
     print(f"Wrote {gt_path}")
 
     print(f"\nNext steps:")
-    print(
-        f"  python scripts/run_and_eval.py --input {h5ad_path} --ground-truth {gt_path} --output results/{out_dir.name}"
-    )
+    print(f"  python scripts/run_and_eval.py --input {h5ad_path} --ground-truth {gt_path} --output results/{out_dir.name}")
 
 
 if __name__ == "__main__":
