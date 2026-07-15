@@ -447,7 +447,7 @@ def model_download(
             snapshot_download(
                 repo_id=repo_id,
                 local_dir=str(cache_path),
-                local_dir_use_symlinks=False,
+                symlinks=False,
             )
     except ConnectionError as e:
         console.print(f"\n[red]Error:[/red] Network failure: {e}")
