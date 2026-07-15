@@ -1,19 +1,19 @@
-"""Configuration and paths for CTC-Detect."""
+"""Unified configuration for CTC-Detect.
 
-import shutil
+Combines model registry, paths, and YAML config loading.
+"""
+
 import sys
 from pathlib import Path
+from typing import Any, Optional, Union
+import yaml
 
-# Package version — keep in sync with pyproject.toml
-__version__ = "0.1.0"
+from ctcdetect.exceptions import ConfigurationError
+
 
 # ---------------------------------------------------------------------------
 # Model registry
 # ---------------------------------------------------------------------------
-# Maps a short alias to a HuggingFace repo id and local sub-directory name.
-# When adding a new model version, extend this dict and add the corresponding
-# entry in MODEL_CATALOG below.
-
 MODEL_REGISTRY = {
     "latest": {
         "repo": "ctheodoris/Geneformer-V1-10M",
@@ -32,34 +32,122 @@ MODEL_REGISTRY = {
     },
 }
 
-# Simple version-to-repo mapping for get_version()
 VERSION_MAP = {
     "latest": "ctheodoris/Geneformer-V1-10M",
     "v1.0": "ctheodoris/Geneformer-V1-10M",
 }
 
-# Default model repo ID
 DEFAULT_MODEL = "ctheodoris/Geneformer-V1-10M"
+
+__version__ = "0.1.0"
 
 # ---------------------------------------------------------------------------
 # Local paths
 # ---------------------------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-# Default cache directory for downloaded models
 MODEL_CACHE_DIR = Path.home() / ".cache" / "ctc-detect" / "models"
 
-# Default project-level Geneformer directory (for development / manual clones)
 GENEFORMER_DIR = PROJECT_ROOT / "Geneformer" / "geneformer"
 
-# Checkpoint directories
 CHECKPOINT_DIR = PROJECT_ROOT / "results" / "checkpoints" / "best_model"
 FINETUNED_DIR = PROJECT_ROOT / "Geneformer" / "Geneformer-V1-10M"
 
-# Geneformer data files
 TOKEN_DICT = GENEFORMER_DIR / "token_dictionary_gc104M.pkl"
 GENE_MEDIAN = GENEFORMER_DIR / "gene_median_dictionary_gc104M.pkl"
 GENE_MAPPING = GENEFORMER_DIR / "ensembl_mapping_dict_gc104M.pkl"
+
+
+# ---------------------------------------------------------------------------
+# Config loading
+# ---------------------------------------------------------------------------
+class Config:
+    """Configuration container with attribute-style access."""
+
+    def __init__(self, data: dict):
+        self._data = data
+
+    def __getattr__(self, name: str) -> Any:
+        if name in self._data:
+            value = self._data[name]
+            if isinstance(value, dict):
+                return Config(value)
+            return value
+        raise AttributeError(f"Config has no key: {name}")
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return self._data.get(key, default)
+
+    def as_dict(self) -> dict:
+        return self._data.copy()
+
+
+def load_config(config_path: Optional[Union[str, Path]] = None) -> Config:
+    """Load configuration from YAML file.
+
+    Args:
+        config_path: Path to config file. If None, uses default configs/preprocess.yaml.
+
+    Returns:
+        Config object with attribute-style access.
+
+    Raises:
+        ConfigurationError: If config file is missing or invalid.
+    """
+    if config_path is None:
+        # Default to package configs/preprocess.yaml (project root / configs)
+        package_root = Path(__file__).resolve().parents[2]
+        config_path = package_root / "configs" / "preprocess.yaml"
+
+    if config_path is not None:
+        config_path = Path(config_path)
+
+    if not config_path.exists():
+        raise ConfigurationError(
+            f"Configuration file not found: {config_path}",
+            hint="Ensure the config file exists or pass a valid path to load_config().",
+            details={"config_path": str(config_path)},
+        )
+
+    try:
+        with open(config_path) as f:
+            data = yaml.safe_load(f)
+    except yaml.YAMLError as e:
+        raise ConfigurationError(
+            f"Failed to parse YAML config: {config_path}",
+            hint="Check YAML syntax. Common issues: tabs instead of spaces, missing quotes.",
+            details={"config_path": str(config_path), "parse_error": str(e)},
+        )
+
+    if not isinstance(data, dict):
+        raise ConfigurationError(
+            f"Config file must contain a YAML mapping (dict), got {type(data).__name__}",
+            details={"config_path": str(config_path)},
+        )
+
+    return Config(data)
+
+
+# Global config instance (loaded on first access)
+_config: Optional[Config] = None
+
+
+def get_config(config_path: Optional[Union[str, Path]] = None, reload: bool = False) -> Config:
+    """Get the global configuration instance.
+
+    Args:
+        config_path: Optional path to config file (only used on first load or if reload=True).
+        reload: Force reloading the config.
+
+    Returns:
+        Config object.
+    """
+    global _config
+    if _config is None or reload:
+        if config_path is not None:
+            config_path = Path(config_path)
+        _config = load_config(config_path)
+    return _config
 
 
 def get_version(version_str: str) -> str:
@@ -86,12 +174,10 @@ def get_model_cache_path(version: str = "latest") -> Path:
     """Return the local cache path for a given model version.
 
     Creates the parent directory if it does not exist.
-    The cache is organized by version alias, e.g.
-    ``~/.cache/ctc-detect/models/latest/``.
+    The cache is organized by version alias, e.g. ``~/.cache/ctc-detect/models/latest/``.
     """
     if version not in MODEL_REGISTRY:
         version = "latest"
-    # Use the version string directly as the subdirectory name
     path = MODEL_CACHE_DIR / version
     path.mkdir(parents=True, exist_ok=True)
     return path
@@ -102,7 +188,7 @@ def get_system_info() -> dict:
     import platform
 
     info = {
-        "version": __version__,
+        "version": "0.1.0",
         "python": sys.version.split()[0],
         "platform": platform.platform(),
         "pytorch": "not installed",
@@ -111,14 +197,12 @@ def get_system_info() -> dict:
         "gpu": None,
     }
 
-    # Try to get the installed package version via importlib.metadata
     try:
         from importlib.metadata import version as _pkg_version
         info["version"] = _pkg_version("ctc-detect")
     except Exception:
-        pass  # fall back to __version__
+        pass
 
-    # PyTorch info
     try:
         import torch
         info["pytorch"] = torch.__version__
@@ -129,7 +213,6 @@ def get_system_info() -> dict:
     except ImportError:
         pass
 
-    # Check for locally available models
     available_models = []
     for alias, meta in MODEL_REGISTRY.items():
         cache_path = MODEL_CACHE_DIR / alias
@@ -137,11 +220,9 @@ def get_system_info() -> dict:
             available_models.append(alias)
     info["cached_models"] = available_models
 
-    # Check for Geneformer installation
     info["geneformer_installed"] = GENEFORMER_DIR.exists()
     info["geneformer_path"] = str(GENEFORMER_DIR)
 
-    # Check for fine-tuned checkpoint
     has_checkpoint = (
         CHECKPOINT_DIR.exists()
         and (
@@ -154,18 +235,38 @@ def get_system_info() -> dict:
     info["checkpoint_available"] = has_checkpoint
     info["checkpoint_path"] = str(CHECKPOINT_DIR)
 
-    # Disk space in model cache directory
     try:
+        import shutil
         disk = shutil.disk_usage(str(MODEL_CACHE_DIR))
-        free_gb = disk.free / (1024 ** 3)
-        total_gb = disk.total / (1024 ** 3)
-        used_gb = disk.used / (1024 ** 3)
-        info["disk_total_gb"] = round(total_gb, 1)
-        info["disk_used_gb"] = round(used_gb, 1)
-        info["disk_free_gb"] = round(free_gb, 1)
+        info["disk_total_gb"] = round(disk.total / (1024 ** 3), 1)
+        info["disk_used_gb"] = round(disk.used / (1024 ** 3), 1)
+        info["disk_free_gb"] = round(disk.free / (1024 ** 3), 1)
     except OSError:
         info["disk_total_gb"] = None
         info["disk_used_gb"] = None
         info["disk_free_gb"] = None
 
     return info
+
+
+# Backwards-compat: allow `from ctcdetect.config import get_version, get_model_cache_path, get_system_info`
+__all__ = [
+    "MODEL_REGISTRY",
+    "VERSION_MAP",
+    "DEFAULT_MODEL",
+    "PROJECT_ROOT",
+    "MODEL_CACHE_DIR",
+    "GENEFORMER_DIR",
+    "CHECKPOINT_DIR",
+    "FINETUNED_DIR",
+    "TOKEN_DICT",
+    "GENE_MEDIAN",
+    "GENE_MAPPING",
+    "Config",
+    "load_config",
+    "get_config",
+    "get_version",
+    "get_model_cache_path",
+    "get_system_info",
+    "__version__",
+]

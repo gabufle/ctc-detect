@@ -196,21 +196,23 @@ def test_detect_format_tsv(tmp_path):
 
 
 def test_detect_format_unknown(tmp_path):
-    """Unknown extension should raise SystemExit."""
+    """Unknown extension should raise InputError."""
     from ctcdetect.preprocess import detect_format
+    from ctcdetect.exceptions import InputError
     
     unknown_path = tmp_path / "test.xyz"
     unknown_path.touch()
     
-    with pytest.raises(SystemExit):
+    with pytest.raises(InputError):
         detect_format(unknown_path)
 
 
 def test_detect_format_nonexistent():
-    """Non-existent path should raise SystemExit."""
+    """Non-existent path should raise InputError."""
     from ctcdetect.preprocess import detect_format
+    from ctcdetect.exceptions import InputError
     
-    with pytest.raises(SystemExit):
+    with pytest.raises(InputError):
         detect_format(Path("/nonexistent/path"))
 
 
@@ -387,7 +389,16 @@ def test_multi_command_with_valid_files(tmp_path):
     
     output_dir = tmp_path / "output"
     
-    # Mock the run_detection function to avoid actual Geneformer processing
+    # Skip if torch is not available (detect module depends on torch)
+    try:
+        import torch
+    except ImportError:
+        pytest.skip("torch not available, skipping multi command tests")
+    
+    # Import detect module so it's available for patching
+    from ctcdetect import detect
+    
+    # Mock the run_detection function at its source module
     with patch("ctcdetect.detect.run_detection") as mock_run:
         mock_run.return_value = None
         
@@ -418,7 +429,16 @@ def test_multi_command_with_threshold(tmp_path):
     
     output_dir = tmp_path / "output"
     
-    # Mock the run_detection function
+    # Skip if torch is not available
+    try:
+        import torch
+    except ImportError:
+        pytest.skip("torch not available, skipping multi command tests")
+    
+    # Import detect module so it's available for patching
+    from ctcdetect import detect
+    
+    # Mock the run_detection function at its source module
     with patch("ctcdetect.detect.run_detection") as mock_run:
         mock_run.return_value = None
         

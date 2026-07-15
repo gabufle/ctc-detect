@@ -25,6 +25,22 @@ from ctcdetect.config import (
     CHECKPOINT_DIR,
     FINETUNED_DIR,
 )
+from ctcdetect.exceptions import (
+    ConfigurationError,
+    InputError,
+    ModelError,
+    TokenizationError,
+    InferenceError,
+    GeneMappingError,
+    OutputError,
+)
+from ctcdetect.preprocess import (
+    detect_format,
+    load_data,
+    run_qc,
+    normalize,
+    map_genes_to_ensembl,
+)
 
 console = Console()
 
@@ -101,7 +117,7 @@ def _resolve_model_dir() -> Path:
     console.print("You need a fine-tuned Geneformer model to run CTC detection.")
     console.print("")
     console.print("Option 1 — Train a model (recommended):")
-    console.print("  python train.py  # saves to results/checkpoints/best_model/")
+    console.print("  python train.py # saves to results/checkpoints/best_model/")
     console.print("")
     console.print("Option 2 — Download the pre-trained CTC model:")
     console.print("  huggingface-cli download ctheodoris/Geneformer-V1-10M \\")
@@ -254,12 +270,10 @@ def _prepare_adata(input_path: Path, progress: Progress, task: TaskID) -> sc.Ann
 
     Steps:
     1. Load data (Cell Ranger MEX or h5ad)
-    2. QC filter
-    3. Normalize
+    2. QC filter (config-driven)
+    3. Normalize (config-driven)
     4. Map gene symbols to Ensembl IDs
     """
-    from ctcdetect.preprocess import detect_format
-
     fmt = detect_format(input_path)
 
     # Load data
@@ -277,63 +291,22 @@ def _prepare_adata(input_path: Path, progress: Progress, task: TaskID) -> sc.Ann
         raise ValueError(f"Unsupported format for detection: {fmt}")
 
     console.print(f"  Loaded: {adata.shape[0]} cells × {adata.shape[1]} genes")
-    progress.update(task, advance=0.2)
+    progress.update(task, advance=0.15)
 
-    # QC: calculate metrics
-    adata.var["mt"] = adata.var_names.str.startswith("MT-")
-    sc.pp.calculate_qc_metrics(
-        adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
-    )
-
-    # QC: filter cells
-    n_before = adata.shape[0]
-    adata = adata[
-        (adata.obs["n_genes_by_counts"] >= 200)
-        & (adata.obs["n_genes_by_counts"] <= 6000)
-        & (adata.obs["pct_counts_mt"] <= 20),
-        :,
-    ].copy()
-    n_after = adata.shape[0]
-    console.print(f"  QC: {n_before} → {n_after} cells ({n_before - n_after} removed)")
+    # QC filter
+    adata = run_qc(adata)
     progress.update(task, advance=0.2)
 
     # Normalize
-    sc.pp.normalize_total(adata, target_sum=1e4)
-    sc.pp.log1p(adata)
-    progress.update(task, advance=0.2)
+    adata = normalize(adata)
+    progress.update(task, advance=0.15)
 
     # Map gene symbols to Ensembl IDs
     with open(GENE_MAPPING, "rb") as f:
         gene_mapping = pickle.load(f)
 
-    ensembl_ids = []
-    mapped = 0
-    for gene in adata.var_names:
-        if gene in gene_mapping:
-            ensembl_ids.append(gene_mapping[gene])
-            mapped += 1
-        else:
-            ensembl_ids.append(None)
-
-    adata.var["ensembl_id"] = ensembl_ids
-    adata = adata[:, adata.var["ensembl_id"].notna()].copy()
-    # Use .values to avoid type issues with scanpy's var_names setter
-    new_names = adata.var["ensembl_id"].values.astype(str)
-    adata.var_names = pd.Index(new_names)
-    # Make var_names unique
-    adata.var_names_make_unique()
-
-    console.print(f"  Gene mapping: {mapped}/{len(ensembl_ids)} genes mapped to Ensembl IDs")
-    console.print(f"  After mapping: {adata.shape[0]} cells × {adata.shape[1]} genes")
-
-    if adata.shape[1] == 0:
-        console.print("[red]Error:[/red] No genes could be mapped to Ensembl IDs.")
-        console.print("This usually means your input data uses gene symbols that are not in the")
-        console.print("Ensembl mapping dictionary. Ensure your data uses standard HGNC gene symbols")
-        console.print("(e.g., TP53, BRCA1, EGFR) rather than numeric IDs or custom names.")
-        raise SystemExit(1)
-
-    progress.update(task, advance=0.2)
+    adata = map_genes_to_ensembl(adata, gene_mapping)
+    progress.update(task, advance=0.15)
 
     # Add n_counts for tokenizer
     if hasattr(adata.X, "toarray"):
@@ -342,7 +315,7 @@ def _prepare_adata(input_path: Path, progress: Progress, task: TaskID) -> sc.Ann
         n_counts = np.array(adata.X.sum(axis=1)).flatten()
     adata.obs["n_counts"] = n_counts
 
-    progress.update(task, advance=0.2)
+    progress.update(task, advance=0.15)
     return adata
 
 
@@ -450,10 +423,6 @@ def _run_inference(model, device, dataset, progress: Progress, task: TaskID):
             progress.update(task, advance=(end - start) / n)
 
     # Uncertainty: max probability < 0.6
-    # Recompute from stored values
-    uncertain = []
-    # We need the raw probabilities to determine uncertainty
-    # Re-run with full softmax to get max probs
     all_max_probs = []
     with torch.no_grad():
         for batch_idx in range(n_batches):
@@ -498,160 +467,174 @@ def _generate_umap(adata: sc.AnnData, results_df: pd.DataFrame, output_path: Pat
 
     # Standard scanpy UMAP pipeline
     sc.pp.highly_variable_genes(adata_umap, n_top_genes=2000, flavor="seurat_v3")
-    sc.pp.pca(adata_umap, n_comps=30)
-    sc.pp.neighbors(adata_umap, n_pcs=30)
-    sc.tl.umap(adata_umap)
+    sc.pp.pca(adata_umap)
+    sc.pp.neighbors(adata_umap, n_neighbors=15, metric="cosine")
+    sc.tl.umap(adata_umap, min_dist=0.5, spread=1.0, random_state=42)
 
-    # Create barcode -> index mapping
-    barcode_to_idx = {bc: i for i, bc in enumerate(adata_umap.obs_names)}
+    # Add results to adata
+    barcode_to_idx = {b: i for i, b in enumerate(adata.obs_names)}
+    matched_barcodes = [b for b in results_df["barcode"] if b in barcode_to_idx]
+    matched_idx = [barcode_to_idx[b] for b in matched_barcodes]
 
-    # Map results to UMAP cells
-    umap_probs = np.full(adata_umap.shape[0], np.nan)
-    umap_preds = np.full(adata_umap.shape[0], np.nan)
-    umap_uncertain = np.full(adata_umap.shape[0], False)
+    ctc_probs = np.zeros(adata_umap.shape[0])
+    predicted = np.zeros(adata_umap.shape[0], dtype=int)
+    uncertain = np.zeros(adata_umap.shape[0], dtype=bool)
 
-    for _, row in results_df.iterrows():
-        bc = row["barcode"]
-        if bc in barcode_to_idx:
-            idx = barcode_to_idx[bc]
-            umap_probs[idx] = row["ctc_probability"]
-            umap_preds[idx] = row["predicted_label"]
-            umap_uncertain[idx] = row["uncertain"]
+    for i, idx in enumerate(matched_idx):
+        ctc_probs[idx] = results_df.iloc[i]["ctc_probability"]
+        predicted[idx] = results_df.iloc[i]["predicted_label"]
+        uncertain[idx] = results_df.iloc[i]["uncertain"]
 
-    # Create four-panel figure
+    adata_umap.obs["ctc_probability"] = ctc_probs
+    adata_umap.obs["predicted_label"] = predicted.astype(str)
+    adata_umap.obs["uncertain"] = uncertain
+
+    # Four-panel figure
     fig, axes = plt.subplots(2, 2, figsize=(14, 12))
-    fig.suptitle("CTC-Detect Results", fontsize=16, fontweight="bold")
 
-    umap_coords = adata_umap.obsm["X_umap"]
+    # Panel 1: CTC probability
+    sc.pl.umap(
+        adata_umap, color="ctc_probability", cmap="viridis",
+        ax=axes[0, 0], show=False, size=20, title="CTC Probability",
+    )
 
-    # Panel 1: CTC Probability
-    ax = axes[0, 0]
-    valid = ~np.isnan(umap_probs)
-    scatter = ax.scatter(
-        umap_coords[valid, 0], umap_coords[valid, 1],
-        c=umap_probs[valid], cmap="RdYlBu_r", s=3, alpha=0.7,
-        vmin=0, vmax=1,
+    # Panel 2: Predicted label
+    sc.pl.umap(
+        adata_umap, color="predicted_label",
+        palette={"0": "lightblue", "1": "red"},
+        ax=axes[0, 1], show=False, size=20, title="Predicted Label",
     )
-    ax.scatter(
-        umap_coords[~valid, 0], umap_coords[~valid, 1],
-        c="lightgray", s=1, alpha=0.3,
-    )
-    plt.colorbar(scatter, ax=ax, label="CTC Probability")
-    ax.set_title("Predicted CTC Probability")
-    ax.set_xlabel("UMAP 1")
-    ax.set_ylabel("UMAP 2")
-
-    # Panel 2: Predicted Label
-    ax = axes[0, 1]
-    valid = ~np.isnan(umap_preds)
-    colors = ["#2196F3", "#F44336"]  # blue=non-CTC, red=CTC
-    cmap = ListedColormap(colors)
-    ax.scatter(
-        umap_coords[valid, 0], umap_coords[valid, 1],
-        c=umap_preds[valid], cmap=cmap, s=3, alpha=0.7,
-        vmin=0, vmax=1,
-    )
-    ax.scatter(
-        umap_coords[~valid, 0], umap_coords[~valid, 1],
-        c="lightgray", s=1, alpha=0.3,
-    )
-    ax.set_title("Predicted Label (0=non-CTC, 1=CTC)")
-    ax.set_xlabel("UMAP 1")
-    ax.set_ylabel("UMAP 2")
 
     # Panel 3: Uncertainty
-    ax = axes[1, 0]
-    ax.scatter(
-        umap_coords[umap_uncertain, 0], umap_coords[umap_uncertain, 1],
-        c="#FF9800", s=3, alpha=0.7, label="Uncertain",
+    sc.pl.umap(
+        adata_umap, color="uncertain",
+        palette={True: "orange", False: "green"},
+        ax=axes[1, 0], show=False, size=20, title="Uncertain (max prob < 0.6)",
     )
-    ax.scatter(
-        umap_coords[~umap_uncertain, 0], umap_coords[~umap_uncertain, 1],
-        c="#9E9E9E", s=1, alpha=0.3, label="Confident",
-    )
-    ax.set_title("Uncertainty Flag (prob < 0.6)")
-    ax.set_xlabel("UMAP 1")
-    ax.set_ylabel("UMAP 2")
-    ax.legend(markerscale=5)
 
-    # Panel 4: Score histogram
-    ax = axes[1, 1]
-    valid_probs = umap_probs[~np.isnan(umap_probs)]
-    ax.hist(valid_probs, bins=50, color="steelblue", edgecolor="white", alpha=0.8)
-    ax.axvline(x=0.5, color="red", linestyle="--", label="Threshold (0.5)")
-    ax.set_xlabel("CTC Probability")
-    ax.set_ylabel("Number of Cells")
-    ax.set_title("Score Distribution")
-    ax.legend()
+    # Panel 4: Expression of key markers (placeholder)
+    # Use a common epithelial marker if available
+    marker_candidates = ["EPCAM", "KRT19", "KRT8", "KRT18"]
+    found_marker = None
+    for m in marker_candidates:
+        if m in adata_umap.var_names:
+            found_marker = m
+            break
 
-    plt.tight_layout()
-    plt.savefig(str(output_path), dpi=150, bbox_inches="tight")
-    plt.close()
-
-    console.print(f"  UMAP saved to {output_path}")
-
-
-def _generate_summary(results_df: pd.DataFrame, output_path: Path):
-    """Generate plain-language clinical summary report."""
-    total = len(results_df)
-    ctc = (results_df["predicted_label"] == 1).sum()
-    non_ctc = (results_df["predicted_label"] == 0).sum()
-    uncertain = results_df["uncertain"].sum()
-    mean_score = results_df["ctc_probability"].mean()
-    median_score = results_df["ctc_probability"].median()
-
-    lines = [
-        "=" * 60,
-        "          CTC-DETECT SUMMARY REPORT",
-        "=" * 60,
-        "",
-        f"  Total cells analyzed:     {total}",
-        f"  CTCs detected:            {ctc} ({ctc/total*100:.1f}%)",
-        f"  Non-CTCs:                 {non_ctc} ({non_ctc/total*100:.1f}%)",
-        f"  Uncertain predictions:    {uncertain} ({uncertain/total*100:.1f}%)",
-        "",
-        "  CTC Probability Scores:",
-        f"    Mean:   {mean_score:.4f}",
-        f"    Median: {median_score:.4f}",
-        "",
-        "  Interpretation:",
-    ]
-
-    if ctc == 0:
-        lines.append("    No circulating tumor cells were detected in this sample.")
-    elif ctc / total < 0.01:
-        lines.append(
-            f"    Rare CTCs detected ({ctc} cells, {ctc/total*100:.2f}% of total). "
-            "This is consistent with early-stage or low-burden disease."
-        )
-    elif ctc / total < 0.1:
-        lines.append(
-            f"    Moderate CTC burden ({ctc} cells, {ctc/total*100:.1f}% of total). "
-            "Clinical correlation recommended."
+    if found_marker:
+        sc.pl.umap(
+            adata_umap, color=found_marker, cmap="plasma",
+            ax=axes[1, 1], show=False, size=20,
+            title=f"Expression: {found_marker}",
         )
     else:
-        lines.append(
-            f"    High CTC burden ({ctc} cells, {ctc/total*100:.1f}% of total). "
-            "This may indicate significant circulating tumor burden."
-        )
+        axes[1, 1].text(0.5, 0.5, "No common epithelial\nmarker found",
+                        ha="center", va="center", transform=axes[1, 1].transAxes)
+        axes[1, 1].set_title("Expression Overlay (placeholder)")
 
-    if uncertain / total > 0.3:
-        lines.append(
-            f"    Note: {uncertain/total*100:.0f}% of cells had uncertain predictions. "
-            "Consider additional QC or manual review of borderline cases."
-        )
+    plt.tight_layout()
+    fig.savefig(output_path / "umap.png", dpi=150, bbox_inches="tight")
+    plt.close(fig)
 
-    lines.extend([
-        "",
-        "=" * 60,
-        "  Generated by CTC-Detect — Powered by Geneformer",
-        "=" * 60,
-    ])
+    console.print(f"  UMAP saved to {output_path / 'umap.png'}")
 
-    with open(output_path, "w") as f:
-        f.write("\n".join(lines) + "\n")
 
-    console.print(f"  Summary saved to {output_path}")
+def _generate_report(
+    results_df: pd.DataFrame,
+    adata: sc.AnnData,
+    output_path: Path,
+    threshold: float,
+):
+    """Generate text and HTML summary reports."""
+    n_total = len(results_df)
+    n_ctc = int((results_df["ctc_probability"] >= threshold).sum())
+    n_non_ctc = n_total - n_ctc
+    n_uncertain = int(results_df["uncertain"].sum())
+
+    mean_ctc_prob = results_df["ctc_probability"].mean()
+    median_ctc_prob = results_df["ctc_probability"].median()
+
+    # Text report
+    with open(output_path / "summary.txt", "w") as f:
+        f.write("CTC-Detect Summary Report\n")
+        f.write("=" * 40 + "\n\n")
+        f.write(f"Total cells analyzed: {n_total}\n")
+        f.write(f"CTC calls (prob >= {threshold}): {n_ctc} ({n_ctc/n_total*100:.1f}%)\n")
+        f.write(f"Non-CTC calls: {n_non_ctc} ({n_non_ctc/n_total*100:.1f}%)\n")
+        f.write(f"Uncertain calls (max prob < 0.6): {n_uncertain}\n\n")
+        f.write(f"Mean CTC probability: {mean_ctc_prob:.4f}\n")
+        f.write(f"Median CTC probability: {median_ctc_prob:.4f}\n")
+        f.write(f"Min CTC probability: {results_df['ctc_probability'].min():.4f}\n")
+        f.write(f"Max CTC probability: {results_df['ctc_probability'].max():.4f}\n")
+
+    # HTML report
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <title>CTC-Detect Report</title>
+    <style>
+        body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }}
+        h1 {{ color: #2c3e50; }}
+        .metric {{ display: inline-block; background: #f8f9fa; border-radius: 8px; padding: 16px; margin: 8px; min-width: 150px; text-align: center; }}
+        .metric-value {{ font-size: 2em; font-weight: bold; color: #2c3e50; }}
+        .metric-label {{ color: #6c757d; font-size: 0.9em; }}
+        table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
+        th, td {{ padding: 10px; text-align: left; border-bottom: 1px solid #dee2e6; }}
+        th {{ background: #f8f9fa; }}
+        .ctc {{ color: #dc3545; }}
+        .non-ctc {{ color: #28a745; }}
+    </style>
+</head>
+<body>
+    <h1>CTC-Detect Report</h1>
+
+    <div class="metric">
+        <div class="metric-value">{n_total}</div>
+        <div class="metric-label">Total Cells</div>
+    </div>
+    <div class="metric ctc">
+        <div class="metric-value">{n_ctc}</div>
+        <div class="metric-label">CTC Calls (>= {threshold})</div>
+    </div>
+    <div class="metric non-ctc">
+        <div class="metric-value">{n_non_ctc}</div>
+        <div class="metric-label">Non-CTC Calls</div>
+    </div>
+    <div class="metric">
+        <div class="metric-value">{n_uncertain}</div>
+        <div class="metric-label">Uncertain Calls</div>
+    </div>
+
+    <h2>Probability Statistics</h2>
+    <table>
+        <tr><th>Metric</th><th>Value</th></tr>
+        <tr><td>Mean CTC Probability</td><td>{mean_ctc_prob:.4f}</td></tr>
+        <tr><td>Median CTC Probability</td><td>{median_ctc_prob:.4f}</td></tr>
+        <tr><td>Min CTC Probability</td><td>{results_df['ctc_probability'].min():.4f}</td></tr>
+        <tr><td>Max CTC Probability</td><td>{results_df['ctc_probability'].max():.4f}</td></tr>
+    </table>
+
+    <h2>Top CTC Candidates</h2>
+    <table>
+        <tr><th>Rank</th><th>Barcode</th><th>CTC Probability</th><th>Predicted</th><th>Uncertain</th></tr>
+"""
+
+    top_ctc = results_df.nlargest(20, "ctc_probability")
+    for rank, (_, row) in enumerate(top_ctc.iterrows(), 1):
+        predicted_label = "CTC" if row["predicted_label"] == 1 else "Non-CTC"
+        uncertain_str = "Yes" if row["uncertain"] else "No"
+        html += f"<tr><td>{rank}</td><td>{row['barcode']}</td><td>{row['ctc_probability']:.4f}</td><td>{predicted_label}</td><td>{uncertain_str}</td></tr>"
+
+    html += """
+    </table>
+</body>
+</html>"""
+
+    with open(output_path / "report.html", "w") as f:
+        f.write(html)
+
+    console.print(f"  Text report: {output_path / 'summary.txt'}")
+    console.print(f"  HTML report: {output_path / 'report.html'}")
 
 
 def run_detection(
@@ -660,86 +643,109 @@ def run_detection(
     cancer_type: Optional[str] = None,
     threshold: float = 0.5,
     skip_umap: bool = False,
-) -> None:
+):
     """Run CTC detection on a single sample.
 
-    Takes Cell Ranger output (filtered feature-barcode matrix) or h5ad file
-    and produces per-cell CTC probability scores, UMAP visualizations,
-    and a clinical summary report.
-
     Args:
-        input_path: Path to Cell Ranger output directory or h5ad file.
-        output_path: Path to output directory (created if needed).
-        cancer_type: Optional cancer type hint (currently unused).
-        threshold: Probability threshold for calling a cell a CTC (default 0.5).
-        skip_umap: If True, skip UMAP computation for faster runs.
+        input_path: Path to Cell Ranger output directory or .h5ad file.
+        output_path: Path to output directory.
+        cancer_type: Cancer type for model selection (not yet implemented).
+        threshold: Probability threshold for CTC calls.
+        skip_umap: Skip UMAP visualization for faster runs.
     """
+    print_banner()
+    console.print(f"[bold]Input:[/bold]  {input_path}")
+    console.print(f"[bold]Output:[/bold] {output_path}")
+    console.print()
+
+    # Verify Geneformer
     _check_geneformer()
+
+    # Resolve model
     model_dir = _resolve_model_dir()
 
-    # Create output directory
-    output_path.mkdir(parents=True, exist_ok=True)
+    # Load model
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Loading model...", total=None)
+        model, device = _load_model(model_dir)
 
+    # Run pipeline with progress tracking
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
         BarColumn(),
-        TextColumn("{task.percentage:3.0f}%"),
         console=console,
     ) as progress:
+        # Prepare data
+        task = progress.add_task("Preprocessing data...", total=1.0)
+        adata = _prepare_adata(input_path, progress, task)
 
-        # Step 1: Load and preprocess
-        task1 = progress.add_task("[cyan]Loading and preprocessing data...", total=1)
-        adata = _prepare_adata(input_path, progress, task1)
+        # Tokenize
+        task = progress.add_task("Tokenizing...", total=1.0)
+        dataset, adata_processed = _tokenize(adata, progress, task)
 
-        # Step 2: Tokenize
-        task2 = progress.add_task("[cyan]Tokenizing with Geneformer...", total=1)
-        dataset, adata = _tokenize(adata, progress, task2)
+        # Inference
+        task = progress.add_task("Running inference...", total=1.0)
+        barcodes, probs, preds, uncertain = _run_inference(model, device, dataset, progress, task)
 
-        # Step 3: Load model
-        task3 = progress.add_task("[cyan]Loading model...", total=1)
-        model, device = _load_model(model_dir)
-        progress.update(task3, advance=1)
+    # Build results DataFrame
+    results_df = pd.DataFrame({
+        "barcode": barcodes,
+        "ctc_probability": probs,
+        "predicted_label": preds,
+        "uncertain": uncertain,
+    })
 
-        # Step 4: Run inference
-        task4 = progress.add_task("[cyan]Running inference...", total=1)
-        barcodes, probs, preds, uncertain = _run_inference(
-            model, device, dataset, progress, task4
-        )
+    # Apply threshold
+    results_df["ctc_call"] = (results_df["ctc_probability"] >= threshold).astype(int)
 
-        # Step 5: Write results
-        task5 = progress.add_task("[cyan]Writing results...", total=1)
+    # Save results
+    output_path.mkdir(parents=True, exist_ok=True)
+    results_df.to_csv(output_path / "ctc_probabilities.csv", index=False)
+    console.print(f"[green]✓[/green] Results saved to {output_path / 'ctc_probabilities.csv'}")
 
-        results_df = pd.DataFrame({
-            "barcode": barcodes,
-            "ctc_probability": probs,
-            "predicted_label": preds,
-            "uncertain": uncertain,
-        })
-
-        # Apply threshold to predicted labels
-        results_df["predicted_label"] = (results_df["ctc_probability"] >= threshold).astype(int)
-
-        csv_path = output_path / "ctc_probabilities.csv"
-        results_df.to_csv(csv_path, index=False)
-        console.print(f"  CSV saved to {csv_path}")
-
-        # Generate UMAP (unless skipped)
-        if not skip_umap:
-            umap_path = output_path / "umap.png"
-            _generate_umap(adata, results_df, umap_path)
-        else:
-            console.print("  UMAP skipped (--skip-umap)")
-
-        # Generate summary
-        summary_path = output_path / "summary.txt"
-        _generate_summary(results_df, summary_path)
-
-        progress.update(task5, advance=1)
-
-    console.print(f"\n[green]✓[/green] All results written to {output_path}")
-    console.print(f"  - ctc_probabilities.csv  ({len(results_df)} cells)")
+    # Generate UMAP
     if not skip_umap:
-        console.print("  - umap.png               (4-panel visualization)")
-    console.print("  - summary.txt            (clinical summary)")
-    console.print(f"  Threshold: {threshold}")
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+        ) as progress:
+            task = progress.add_task("Generating UMAP...", total=None)
+            _generate_umap(adata, results_df, output_path)
+
+    # Generate reports
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Generating reports...", total=None)
+        _generate_report(results_df, adata, output_path, threshold)
+
+    console.print(f"\n[green]✓[/green] Detection complete. Results in {output_path}")
+
+
+def print_banner():
+    """Print the CTC-Detect banner."""
+    console.print()
+    console.print("[bold cyan]██████╗███████╗██████╗ ██╗   ██╗███████╗██████╗ [/bold cyan]")
+    console.print("[bold cyan]██╔════╝██╔════╝██╔══██╗╚██╗ ██╔╝██╔════╝██╔══██╗[/bold cyan]")
+    console.print("[bold cyan]██║     █████╗  ██████╔╝ ╚████╔╝ █████╗  ██████╔╝[/bold cyan]")
+    console.print("[bold cyan]██║     ██╔══╝  ██╔══██╗  ╚██╔╝  ██╔══╝  ██╔══██╗[/bold cyan]")
+    console.print("[bold cyan]╚██████╗███████╗██║  ██║   █║   ██║   ███████╗██║  ██║[/bold cyan]")
+    console.print("[bold cyan] ╚═════╝╚══════╝╚═╝  ╚═╝   ╚═╝   ╚══════╝╚═╝  ╚═╝[/bold cyan]")
+    console.print("       [dim]Geneformer-based CTC Detection[/dim]")
+    console.print()
+
+
+# Entry point for direct script execution
+if __name__ == "__main__":
+    import typer
+    app = typer.Typer()
+    app.command()(run_detection)
+    app()

@@ -8,6 +8,7 @@ import pytest
 import scanpy as sc
 
 from ctcdetect.preprocess import detect_format, validate_input, load_data, SUPPORTED_FORMATS
+from ctcdetect.exceptions import InputError
 
 
 def test_detect_format_cellranger(tmp_path):
@@ -74,20 +75,20 @@ def test_detect_format_tsv(tmp_path):
 
 
 def test_detect_format_unknown(tmp_path):
-    """An unknown file extension should raise SystemExit."""
+    """An unknown file extension should raise InputError."""
     weird_path = tmp_path / "data.xyz"
     weird_path.write_text("not a real file")
 
-    with pytest.raises(SystemExit):
+    with pytest.raises(InputError):
         detect_format(weird_path)
 
 
 def test_detect_format_unknown_dir(tmp_path):
-    """A directory with no recognizable files should raise SystemExit."""
+    """A directory with no recognizable files should raise InputError."""
     empty_dir = tmp_path / "empty"
     empty_dir.mkdir()
 
-    with pytest.raises(SystemExit):
+    with pytest.raises(InputError):
         detect_format(empty_dir)
 
 
