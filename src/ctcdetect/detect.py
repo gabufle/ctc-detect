@@ -17,18 +17,16 @@ import torch
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskID
 
+from ctcdetect.config import (
+    GENEFORMER_DIR,
+    TOKEN_DICT,
+    GENE_MEDIAN,
+    GENE_MAPPING,
+    CHECKPOINT_DIR,
+    FINETUNED_DIR,
+)
+
 console = Console()
-
-# Geneformer paths
-GENEFORMER_DIR = Path(__file__).resolve().parents[2] / "Geneformer" / "geneformer"
-TOKEN_DICT = GENEFORMER_DIR / "token_dictionary_gc104M.pkl"
-GENE_MEDIAN = GENEFORMER_DIR / "gene_median_dictionary_gc104M.pkl"
-GENE_MAPPING = GENEFORMER_DIR / "ensembl_mapping_dict_gc104M.pkl"
-
-# Model paths
-CHECKPOINT_DIR = Path(__file__).resolve().parents[2] / "results" / "checkpoints" / "best_model"
-# Fallback: the fine-tuned model from the original training
-FINETUNED_DIR = Path(__file__).resolve().parents[2] / "Geneformer" / "Geneformer-V1-10M"
 
 
 def _check_geneformer():

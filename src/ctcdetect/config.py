@@ -41,11 +41,6 @@ VERSION_MAP = {
 # Default model repo ID
 DEFAULT_MODEL = "ctheodoris/Geneformer-V1-10M"
 
-# Cancer-type specific model overrides (future use)
-CANCER_MODELS: dict[str, str] = {
-    # e.g. "breast": "organization/geneformer-ctc-breast-v1",
-}
-
 # ---------------------------------------------------------------------------
 # Local paths
 # ---------------------------------------------------------------------------

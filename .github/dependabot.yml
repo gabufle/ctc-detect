@@ -1,0 +1,55 @@
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "pip"
+    groups:
+      ml-deps:
+        patterns:
+          - "torch"
+          - "transformers"
+          - "peft"
+          - "accelerate"
+          - "datasets"
+          - "scanpy"
+          - "anndata"
+          - "scikit-learn"
+          - "umap-learn"
+          - "matplotlib"
+          - "seaborn"
+          - "pyensembl"
+        update-types:
+          - "minor"
+          - "patch"
+      cli-deps:
+        patterns:
+          - "typer"
+          - "rich"
+        update-types:
+          - "minor"
+          - "patch"
+      test-deps:
+        patterns:
+          - "pytest*"
+          - "ruff"
+          - "mypy"
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    labels:
+      - "dependencies"
+      - "github-actions"

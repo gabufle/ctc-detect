@@ -45,73 +45,41 @@ Key results on the held-out test set (1,674 cells):
 
 **Out-of-scope use.** This is **not** a clinical or diagnostic tool. It must **not** be used to inform patient care, diagnosis, prognosis, or treatment decisions. The model has **not** been validated across patients or cohorts, has not been calibrated, and has not undergone any regulatory review. It is not a substitute for CellSearch or any validated CTC assay.
 
-## Installation
-
-### Requirements
-
-- Python >= 3.10
-- ~8 GB RAM (for model loading on CPU; GPU recommended for training)
-- ~2 GB disk space for the model checkpoint
-
-### Setup
+## Quick Start
 
 ```bash
+# 1. Install
 git clone https://github.com/gabufle/ctc-detect.git
 cd ctc-detect
-python -m venv .venv
-source .venv/bin/activate
+python -m venv .venv && source .venv/bin/activate
 pip install -e .
-```
 
-This installs the CLI tool with dependencies: `typer` (CLI), `rich` (terminal output).
+# 2. Verify your input data works
+ctc-detect validate --input data/raw/sample.h5ad
 
-For training and evaluation, additional packages are needed:
+# 3. Check system info
+ctc-detect info
 
-```bash
-pip install torch transformers peft datasets scanpy anndata scikit-learn matplotlib
-```
-
-The Geneformer model itself (~1.2 GB) is downloaded automatically from HuggingFace on first use and cached locally.
-
-## CLI Usage
-
-> **⚠️ Real CTC inference is not functional yet.** Because no validated fine-tuned adapter is published, the detection commands (`run` / `batch`) are gated behind a `PeftModel` adapter check and will refuse to run without a proper LoRA adapter. With only the base Geneformer model available — which scores near random — this gating is intentional. The commands below document the *intended* interface; only `validate` and `evaluate` (against an existing predictions CSV) are usable today.
-
-### Download the model
-
-> Downloads the **base** Geneformer model only. The fine-tuned CTC adapter is not published yet (see **Project Status**), so this alone does not enable real detection.
-
-```bash
+# 4. Download base Geneformer model (optional, auto-downloads on first run)
 ctc-detect model download
 ```
 
-### Validate input data
+## CLI Usage — What Works Today
 
-```bash
-ctc-detect validate --input data/raw/sample.h5ad
-```
+| Command | Status | Notes |
+|---------|--------|-------|
+| `validate` | ✅ Working | Format/QC checks only, no model needed |
+| `evaluate` | ✅ Working | Metrics from existing predictions CSV |
+| `info` | ✅ Working | System info, cached models, disk space |
+| `model list` | ✅ Working | Shows available model versions |
+| `model download` | ✅ Working | Downloads base Geneformer from HF |
+| `run` | ❌ Gated | Needs published LoRA adapter |
+| `batch` | ❌ Gated | Same adapter gating as `run` |
+| `multi` | ❌ Gated | Same adapter gating as `run` |
 
-### Run detection on a single sample
+> **⚠️ Real CTC inference is not functional yet.** The `run`, `batch`, and `multi` commands are gated behind a `PeftModel` adapter check and will refuse to run without a proper LoRA adapter. The base Geneformer model scores near random (AUROC ~0.51). See **Project Status** and **Roadmap**.
 
-> **Not functional yet** — gated behind the `PeftModel` adapter check until a validated adapter is published.
-
-```bash
-ctc-detect run --input data/raw/sample.h5ad --output results/sample_output/
-```
-
-Options:
-- `--threshold 0.5` — classification threshold (default: 0.5)
-- `--skip-umap` — skip UMAP visualization (faster)
-
-### Batch process multiple samples
-
-> **Not functional yet** — same `PeftModel` adapter gating as `run`.
-
-```bash
-ctc-detect batch --input-dir data/raw/ --output-dir results/batch_output/
-```
-
-### Process multiple individual files
+### Process multiple individual files (`multi`)
 
 > **New!** Process multiple files of different formats in one command.
 
@@ -132,19 +100,6 @@ Options:
 - `--threshold 0.5` — classification threshold (default: 0.5)
 - `--skip-umap` — skip UMAP visualization (faster)
 - `--output -o` — output directory (required)
-
-### Evaluate predictions against ground truth
-
-```bash
-ctc-detect evaluate --predictions results/predictions.csv --ground-truth data/labels.csv --output results/eval/
-```
-
-### Model info
-
-```bash
-ctc-detect model info
-ctc-detect model list
-```
 
 ## Training
 
