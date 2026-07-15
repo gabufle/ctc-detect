@@ -344,7 +344,7 @@ def test_multi_command_help():
     # Strip ANSI escape codes for assertion
     import re
     clean = re.sub(r'\x1b\[[0-9;]*m', '', result.output)
-    assert "FILES" in clean
+    assert "Arguments" in clean
     assert "--output" in clean
     assert "--threshold" in clean
     assert "--skip-umap" in clean
