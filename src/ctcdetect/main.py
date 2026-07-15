@@ -444,10 +444,11 @@ def model_download(
         ) as progress:
             progress.add_task(f"Downloading model '{version}'...", total=None)
 
+            # mypy: stubs lag behind runtime; parameter renamed to `symlinks` in newer versions
             snapshot_download(
                 repo_id=repo_id,
                 local_dir=str(cache_path),
-                symlinks=False,
+                symlinks=False,  # type: ignore
             )
     except ConnectionError as e:
         console.print(f"\n[red]Error:[/red] Network failure: {e}")
