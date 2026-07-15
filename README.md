@@ -48,7 +48,7 @@ Key results on the held-out test set (1,674 cells):
 ## Quick Start
 
 ```bash
-# 1. Install
+# 1. Install (Python 3.10–3.12 recommended; see note below)
 git clone https://github.com/gabufle/ctc-detect.git
 cd ctc-detect
 python -m venv .venv && source .venv/bin/activate
@@ -63,6 +63,8 @@ ctc-detect info
 # 4. Download base Geneformer model (optional, auto-downloads on first run)
 ctc-detect model download
 ```
+
+> **Python version note:** This project uses `transformers==4.41.0` and `peft==0.11.0` which were validated with Python 3.10–3.11 and PyTorch 2.3.x. Python 3.12+ will pull newer PyTorch (≥2.6) which is API-compatible for inference but not tested for training. For exact training parity, use Python 3.10–3.11 (CI tests on 3.10/3.11/3.12).
 
 ## CLI Usage — What Works Today
 
