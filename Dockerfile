@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Pin all ML dependencies to known-compatible versions
+# These match the training environment (transformers 4.41.0, peft 0.11.0, torch 2.3.x)
 RUN pip install --no-cache-dir \
     transformers==4.41.0 \
     peft==0.11.0 \
@@ -43,7 +44,10 @@ import transformers, peft, accelerate, datasets, scanpy, torch, sklearn; \
 from peft import LoraConfig, get_peft_model, TaskType; \
 from transformers import AutoModelForSequenceClassification; \
 print('ALL IMPORTS OK'); \
-print('CUDA:', torch.cuda.is_available())"
+print('CUDA:', torch.cuda.is_available()); \
+print('Torch:', torch.__version__); \
+print('Transformers:', transformers.__version__); \
+print('PEFT:', peft.__version__)"
 
 COPY . /workspace/ctc-detect
 WORKDIR /workspace/ctc-detect
