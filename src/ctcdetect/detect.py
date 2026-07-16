@@ -25,18 +25,8 @@ from ctcdetect.config import (
     CHECKPOINT_DIR,
     FINETUNED_DIR,
 )
-from ctcdetect.exceptions import (
-    ConfigurationError,
-    InputError,
-    ModelError,
-    TokenizationError,
-    InferenceError,
-    GeneMappingError,
-    OutputError,
-)
 from ctcdetect.preprocess import (
     detect_format,
-    load_data,
     run_qc,
     normalize,
     map_genes_to_ensembl,
@@ -458,7 +448,6 @@ def _generate_umap(adata: sc.AnnData, results_df: pd.DataFrame, output_path: Pat
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    from matplotlib.colors import ListedColormap
 
     console.print("  Computing UMAP on expression data...")
 

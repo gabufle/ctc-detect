@@ -8,7 +8,6 @@ tokenization settings are loaded from configs/preprocess.yaml.
 """
 
 from pathlib import Path
-from typing import Any
 
 import scanpy as sc
 import pandas as pd
@@ -18,9 +17,8 @@ from ctcdetect.exceptions import (
     InputError,
     ValidationError,
     GeneMappingError,
-    ConfigurationError,
 )
-from ctcdetect.config import load_config, get_config_value
+from ctcdetect.config import get_config_value
 
 console = Console()
 
