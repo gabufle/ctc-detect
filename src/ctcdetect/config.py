@@ -269,4 +269,18 @@ __all__ = [
     "get_model_cache_path",
     "get_system_info",
     "__version__",
+    "get_config_value",
 ]
+
+
+def get_config_value(key: str, default=None):
+    """Get a nested config value using dot notation (e.g., 'qc.min_genes')."""
+    cfg = get_config()
+    parts = key.split(".")
+    value: Any = cfg.as_dict()
+    for part in parts:
+        if isinstance(value, dict) and part in value:
+            value = value[part]
+        else:
+            return default
+    return value

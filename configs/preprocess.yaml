@@ -18,6 +18,9 @@ qc:
   min_counts: 500
   max_counts: 50000
 
+  # Minimum number of cells to keep after QC filtering
+  min_cells: 10
+
   # Optional: filter by ribosomal gene percentage
   # max_pct_ribo: 50.0
 

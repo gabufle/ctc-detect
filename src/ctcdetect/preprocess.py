@@ -20,12 +20,9 @@ from ctcdetect.exceptions import (
     GeneMappingError,
     ConfigurationError,
 )
-from ctcdetect.config import load_config, get_config
+from ctcdetect.config import load_config, get_config_value
 
 console = Console()
-
-# Load configuration at module import
-CONFIG = load_config()
 
 # Re-export supported formats for external use
 SUPPORTED_FORMATS = {
@@ -37,22 +34,6 @@ SUPPORTED_FORMATS = {
     "mtx": "Matrix Market Exchange format (.mtx)",
     "loom": "Loom file format (.loom)",
 }
-
-
-def get_config_value(key: str, default=None):
-    """Get a nested config value using dot notation (e.g., 'qc.min_genes').
-
-    This wraps config_loader.get_config for backwards compatibility.
-    """
-    cfg = get_config()
-    parts = key.split(".")
-    value: Any = cfg.as_dict()
-    for part in parts:
-        if isinstance(value, dict) and part in value:
-            value = value[part]
-        else:
-            return default
-    return value
 
 
 def _get_int(key: str, default: int) -> int:
@@ -188,7 +169,7 @@ def _validate_cellranger(input_path: Path):
     with open(barcodes_files[0]) as f:
         n_barcodes = sum(1 for _ in f)
     console.print(f"  Barcodes: {n_barcodes}")
-    if n_barcodes < get_config("qc.min_cells", 10):
+    if n_barcodes < get_config_value("qc.min_cells", 10):
         console.print(
             f"[yellow]Warning:[/yellow] Very few barcodes ({n_barcodes}). "
             f"This may be a sparse or filtered dataset."
@@ -405,9 +386,9 @@ def run_qc(adata: sc.AnnData) -> sc.AnnData:
 
     n_before = adata.shape[0]
 
-    min_genes = get_config("qc.min_genes", 200)
-    max_genes = get_config("qc.max_genes", 6000)
-    max_pct_mt = get_config("qc.max_pct_mt", 20)
+    min_genes = get_config_value("qc.min_genes", 200)
+    max_genes = get_config_value("qc.max_genes", 6000)
+    max_pct_mt = get_config_value("qc.max_pct_mt", 20)
 
     adata = adata[
         (adata.obs["n_genes_by_counts"] >= min_genes)
@@ -419,10 +400,10 @@ def run_qc(adata: sc.AnnData) -> sc.AnnData:
     n_after = adata.shape[0]
     console.print(f"  QC: {n_before} → {n_after} cells ({n_before - n_after} removed)")
 
-    if n_after < get_config("qc.min_cells", 10):
+    if n_after < get_config_value("qc.min_cells", 10):
         raise ValidationError(
             f"Too few cells remain after QC ({n_after}). "
-            f"Minimum required: {get_config('qc.min_cells', 10)}",
+            f"Minimum required: {get_config_value('qc.min_cells', 10)}",
             failed_check="qc_insufficient_cells",
             hint="Consider relaxing QC thresholds in configs/preprocess.yaml",
         )
@@ -442,8 +423,8 @@ def normalize(adata: sc.AnnData) -> sc.AnnData:
     Returns:
         Normalized AnnData object.
     """
-    target_sum = get_config("normalize.target_sum", 10000)
-    log1p = get_config("normalize.log1p", True)
+    target_sum = get_config_value("normalize.target_sum", 10000)
+    log1p = get_config_value("normalize.log1p", True)
 
     sc.pp.normalize_total(adata, target_sum=target_sum)
     if log1p:
@@ -479,9 +460,9 @@ def map_genes_to_ensembl(adata: sc.AnnData, gene_mapping: dict) -> sc.AnnData:
     total = len(ensembl_ids)
     mapping_rate = mapped / total if total > 0 else 0.0
 
-    min_fraction = get_config("gene_mapping.min_mapped_fraction", 0.1)
-    require_mapped = get_config("gene_mapping.require_mapped", True)
-    warn_on_low = get_config("gene_mapping.warn_on_low_mapping", True)
+    min_fraction = get_config_value("gene_mapping.min_mapped_fraction", 0.1)
+    require_mapped = get_config_value("gene_mapping.require_mapped", True)
+    warn_on_low = get_config_value("gene_mapping.warn_on_low_mapping", True)
 
     if warn_on_low and mapping_rate < 0.5:
         console.print(
