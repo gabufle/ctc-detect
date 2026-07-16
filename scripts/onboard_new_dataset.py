@@ -352,220 +352,212 @@ def main():
         sys.exit(1)
 
     # ============================================================
-    # STEP 2: COMPRESSION + DELIMITER DETECTION (for text files)
+    # STEP 2-4: HANDLE .h5ad FILES vs TEXT FILES
     # ============================================================
-    if input_path.suffix in (".csv", ".tsv", ".txt", ".gz") or input_path.name.endswith(".txt.gz"):
+    if input_path.suffix == ".h5ad":
         print("\n" + "=" * 70)
-        print("STEP 2: COMPRESSION + DELIMITER DETECTION")
+        print("STEP 2-4: SKIPPED (native .h5ad format — no text parsing needed)")
         print("=" * 70)
-
-        lines, detected_delim = peek_text_file(input_path)
-        tab_char = "\t"
-        print(f"Detected compression: {'gzip' if input_path.suffix == '.gz' else 'none'}")
-        print(f"Detected delimiter:   {'tab' if detected_delim == tab_char else 'comma'}")
-        print("\nFirst 5 lines:")
-        for i, line in enumerate(lines):
-            print(f"  {line.rstrip()}")
-
-        if confirm("\nConfirm delimiter and proceed?", default="y"):
-            delim = detected_delim
-        else:
-            delim = input("Enter delimiter (\\t for tab, , for comma): ").strip()
-            if delim == "\\t":
-                delim = "\t"
-            elif delim == ",":
-                delim = ","
-            else:
-                delim = "\t"
-
-        # Read header + first few data rows for orientation detection
-        opener = gzip.open if input_path.suffix == ".gz" else open
-        with opener(input_path, "rt") as f:
-            header = next(f)
-            # Count data rows (peek)
-            n_data_rows = sum(1 for _ in f)
-            # Reset and read a few data rows
-            f.seek(0)
-            next(f)  # skip header
-            _ = [next(f) for _ in range(min(5, n_data_rows))]
-
-        # ============================================================
-        # STEP 3: ORIENTATION + METADATA COLUMNS
-        # ============================================================
-        print("\n" + "=" * 70)
-        print("STEP 3: ORIENTATION + METADATA COLUMN DETECTION")
-        print("=" * 70)
-
-        orient_info = detect_orientation_and_meta_columns(header, delim, n_data_rows)
-        print(f"\nDetected orientation: {orient_info['orientation']}")
-        print(f"Total columns: {orient_info['n_cols']}")
-        print(f"Estimated data rows: {n_data_rows}")
-        print(f"Metadata columns before sample data: {len(orient_info['meta_cols'])}")
-        print("\nALL column names:")
-        print_columns_in_groups(orient_info['all_columns'])
-
-        if orient_info['meta_cols']:
-            print("\nPotential metadata columns detected:")
-            for idx, name in orient_info['meta_cols']:
-                print(f"  [{idx}] {name}")
-
-        # Ask human to confirm gene ID column and sample start column
-        gene_idx, sample_idx = ask_column_indices(
-            orient_info['n_cols'],
-            orient_info['meta_cols'],
-            orient_info['gene_id_col_idx'],
-            orient_info['sample_start_col_idx']
-        )
-
-        # ============================================================
-        # STEP 4: NORMALIZATION STATE CHECK
-        # ============================================================
-        print("\n" + "=" * 70)
-        print("STEP 4: NORMALIZATION STATE CHECK (CRITICAL)")
-        print("=" * 70)
-
-        norm_info = check_normalization_state(input_path, delim, sample_idx)
-        print(f"Detected normalization state: {norm_info['state'].upper()}")
-        print(f"Sample values (first 5 rows, first sample column): {norm_info['sample_values']}")
-        print(f"Min: {norm_info['min']}, Max: {norm_info['max']}")
-        print(f"Has decimals: {norm_info['has_decimals']}, Has negatives: {norm_info['has_negatives']}")
-        print("\n!!! SILENT NORMALIZATION MISMATCHES HAVE CAUSED SILENT FAILURES BEFORE !!!")
-        print("Raw counts: integers, max > 1000, no negatives")
-        print("LogCPM/LogTPM: decimals, max ~10-50, can have negatives")
-        print("TPM/FPKM: decimals, max > 1000")
-        if confirm("\nDoes this look like RAW COUNTS (integers, large values, no negatives)?", default="y"):
-            pass  # proceed
-        else:
-            print("WARNING: Non-raw data detected. prepare_external_dataset.py expects raw counts.")
-            print("You may need to preprocess (e.g., extract_gse67980_counts.py pattern) before proceeding.")
-            if not confirm("Continue anyway? (prepare_external_dataset.py may produce wrong results)", default="n"):
-                sys.exit(1)
-
-        # At this point we have enough info to call prepare_external_dataset.py
-        # But first we need label configuration (Step 5)
-
-        # ============================================================
-        # STEP 5: LABEL SOURCE CONFIGURATION
-        # ============================================================
-        print("\n" + "=" * 70)
-        print("STEP 5: GROUND-TRUTH LABEL SOURCE")
-        print("=" * 70)
-        print("How are CTC vs non-CTC labels provided?")
-        print("  1) Separate CSV file mapping barcode -> label (--label-source file)")
-        print("  2) Encoded in cell/column names via regex (--label-source colname-regex)")
-        label_choice = input("Choose [1/2]: ").strip()
-
-        if label_choice == "1":
-            labels_path = input("  Path to labels CSV: ").strip()
-            barcode_col = input("  Barcode column name [barcode]: ").strip() or "barcode"
-            label_col = input("  Label column name [label]: ").strip() or "label"
-            positive_values = input("  Comma-separated positive label values (e.g., 'tumor,CTC'): ").strip()
-            label_args = [
-                "--label-source", "file",
-                "--labels", labels_path,
-                "--barcode-col", barcode_col,
-                "--label-col", label_col,
-                "--positive-values", positive_values,
-            ]
-        elif label_choice == "2":
-            print("  Regex-based labeling uses a JSON config with:")
-            print("    - positive_patterns: []  (optional)")
-            print("    - negative_patterns: [...]  (required)")
-            print("    - unmatched: 'exclude'|'error'|'positive'|'negative'")
-            config_path = input("  Path to label config JSON: ").strip()
-            if not Path(config_path).exists():
-                print("  Config not found. Example configs in configs/labels/")
-                if confirm("  Create a template config now?", default="y"):
-                    template = {
-                        "positive_patterns": [],
-                        "negative_patterns": ["(Bcells?|Tcells?|NK|Mono|Gra|plts?)$"],
-                        "unmatched": "exclude"
-                    }
-                    template_path = output_dir / "label_config_template.json"
-                    with open(template_path, "w") as f:
-                        json.dump(template, f, indent=2)
-                    print(f"  Template written to {template_path}")
-                    print("  Edit it, then re-run with --label-config pointing to it.")
-                    sys.exit(0)
-                else:
-                    sys.exit(1)
-            label_args = ["--label-source", "colname-regex", "--label-config", config_path]
-        else:
-            print("Invalid choice.")
-            sys.exit(1)
-
-        # ============================================================
-        # STEP 6: RUN prepare_external_dataset.py
-        # ============================================================
-        print("\n" + "=" * 70)
-        print("STEP 6: RUNNING prepare_external_dataset.py")
-        print("=" * 70)
-
-        # Build args for prepare_external_dataset.py
-        # It expects --counts, --label-source, --output-dir, plus label-specific args
-        prep_args = [
-            "--counts", str(input_path),
-            "--output-dir", str(output_dir),
-        ] + label_args
-
-        # Note: prepare_external_dataset.py assumes genes x cells for text files
-        # and transposes. Our orientation detection tells us if that's correct.
-        # If orientation is cells_x_genes, we need to transpose first or tell the user.
-        if orient_info['orientation'] == "cells_x_genes":
-            print("\nWARNING: Detected orientation is CELLS x GENES (samples as rows).")
-            print("prepare_external_dataset.py expects GENES x CELLS for text inputs and transposes.")
-            print("You may need to transpose the matrix first, or use a custom preprocessing step.")
-            if not confirm("Continue anyway? (prepare_external_dataset.py will transpose again, likely wrong)", default="n"):
-                sys.exit(1)
-
-        print(f"\nRunning: python scripts/prepare_external_dataset.py {' '.join(prep_args)}")
-        if confirm("Execute?", default="y"):
-            result = run_script(scripts_dir / "prepare_external_dataset.py", prep_args)
-            if result.returncode != 0:
-                print("prepare_external_dataset.py failed. Check output above.")
-                sys.exit(1)
-        else:
-            print("Skipped. Run manually when ready.")
-            sys.exit(0)
-
-        # ============================================================
-        # STEP 7: PATIENT ID EXTRACTION (for combine_training_datasets.py)
-        # ============================================================
-        print("\n" + "=" * 70)
-        print("STEP 7: PATIENT ID EXTRACTION PATTERN (for combine_training_datasets.py)")
-        print("=" * 70)
-        print("If you plan to combine this dataset with others for training,")
-        print("combine_training_datasets.py needs a patient_id extraction pattern.")
-        print("Examples:")
-        print("  gse109761: Br16_AC12 -> Br16  (regex: ^(PLT_)?([A-Za-z]+\\d+))")
-        print("  gse67980:  Pr10.1.2 -> Pr10   (regex: ^([A-Za-z]+\\d+))")
-        dataset_name = input("\nDataset name (e.g., gse109761, gse67980, zhang): ").strip()
-        patient_regex = input("Patient ID regex (capture group 1 = patient ID) [^([A-Za-z]+\\d+)]: ").strip() or r"^([A-Za-z]+\d+)"
-
-        # Save pattern for later use
-        pattern_info = {
-            "dataset_name": dataset_name,
-            "patient_id_regex": patient_regex,
-            "output_h5ad": str(output_dir / "data.h5ad"),
-        }
-        pattern_path = output_dir / "patient_id_pattern.json"
-        with open(pattern_path, "w") as f:
-            json.dump(pattern_info, f, indent=2)
-        print(f"Saved pattern to {pattern_path}")
-
-        print("\n" + "=" * 70)
-        print("DONE: Standardized dataset ready at:")
-        print(f"  {output_dir}/data.h5ad")
-        print(f"  {output_dir}/ground_truth.csv")
-        print("=" * 70)
-        print("\nNext steps:")
-        print(f"  1. Spot-check: python -c \"import scanpy as sc; a=sc.read('{output_dir}/data.h5ad'); print(a.obs[['is_ctc','epcam_status']].value_counts())\"")
-        print(f"  2. Evaluate:   python scripts/run_and_eval.py --input {output_dir}/data.h5ad --ground-truth {output_dir}/ground_truth.csv --output results/{output_dir.name}")
-        print(f"  3. Combine:    python scripts/combine_training_datasets.py --datasets {dataset_name}={output_dir}/data.h5ad ... --output data/combined_training_set.h5ad")
-
+        print("Detected .h5ad file. prepare_external_dataset.py handles this natively.")
+        print("Skipping delimiter/orientation/normalization detection steps.")
     else:
-        print(f"Unrecognized file type: {input_path.suffix}")
+        # ============================================================
+        # STEP 2: COMPRESSION + DELIMITER DETECTION
+        # ============================================================
+        if input_path.suffix in (".csv", ".tsv", ".txt", ".gz") or input_path.name.endswith(".txt.gz"):
+            print("\n" + "=" * 70)
+            print("STEP 2: COMPRESSION + DELIMITER DETECTION")
+            print("=" * 70)
+
+            lines, detected_delim = peek_text_file(input_path)
+            tab_char = "\t"
+            print(f"Detected compression: {'gzip' if input_path.suffix == '.gz' else 'none'}")
+            print(f"Detected delimiter:   {'tab' if detected_delim == tab_char else 'comma'}")
+            print("\nFirst 5 lines:")
+            for i, line in enumerate(lines):
+                print(f"  {line.rstrip()}")
+
+            if confirm("\nConfirm delimiter and proceed?", default="y"):
+                delim = detected_delim
+            else:
+                delim = input("Enter delimiter (\\t for tab, , for comma): ").strip()
+                if delim == "\\t":
+                    delim = "\t"
+                elif delim == ",":
+                    delim = ","
+                else:
+                    delim = "\t"
+
+            # Read header + first few data rows for orientation detection
+            opener = gzip.open if input_path.suffix == ".gz" else open
+            with opener(input_path, "rt") as f:
+                header = next(f)
+                # Count data rows (peek)
+                n_data_rows = sum(1 for _ in f)
+                # Reset and read a few data rows
+                f.seek(0)
+                next(f)  # skip header
+                _ = [next(f) for _ in range(min(5, n_data_rows))]
+
+            # ============================================================
+            # STEP 3: ORIENTATION + METADATA COLUMNS
+            # ============================================================
+            print("\n" + "=" * 70)
+            print("STEP 3: ORIENTATION + METADATA COLUMN DETECTION")
+            print("=" * 70)
+
+            orient_info = detect_orientation_and_meta_columns(header, delim, n_data_rows)
+            print(f"\nDetected orientation: {orient_info['orientation']}")
+            print(f"Total columns: {orient_info['n_cols']}")
+            print(f"Estimated data rows: {n_data_rows}")
+            print(f"Metadata columns before sample data: {len(orient_info['meta_cols'])}")
+            print("\nALL column names:")
+            print_columns_in_groups(orient_info['all_columns'])
+
+            if orient_info['meta_cols']:
+                print("\nPotential metadata columns detected:")
+                for idx, name in orient_info['meta_cols']:
+                    print(f"  [{idx}] {name}")
+
+            # Ask human to confirm gene ID column and sample start column
+            gene_idx, sample_idx = ask_column_indices(
+                orient_info['n_cols'],
+                orient_info['meta_cols'],
+                orient_info['gene_id_col_idx'],
+                orient_info['sample_start_col_idx']
+            )
+
+            # ============================================================
+            # STEP 4: NORMALIZATION STATE CHECK
+            # ============================================================
+            print("\n" + "=" * 70)
+            print("STEP 4: NORMALIZATION STATE CHECK (CRITICAL)")
+            print("=" * 70)
+
+            norm_info = check_normalization_state(input_path, delim, sample_idx)
+            print(f"Detected normalization state: {norm_info['state'].upper()}")
+            print(f"Sample values (first 5 rows, first sample column): {norm_info['sample_values']}")
+            print(f"Min: {norm_info['min']}, Max: {norm_info['max']}")
+            print(f"Has decimals: {norm_info['has_decimals']}, Has negatives: {norm_info['has_negatives']}")
+            print("\n!!! SILENT NORMALIZATION MISMATCHES HAVE CAUSED SILENT FAILURES BEFORE !!!")
+            print("Raw counts: integers, max > 1000, no negatives")
+            print("LogCPM/LogTPM: decimals, max ~10-50, can have negatives")
+            print("TPM/FPKM: decimals, max > 1000")
+            if confirm("\nDoes this look like RAW COUNTS (integers, large values, no negatives)?", default="y"):
+                pass  # proceed
+            else:
+                print("WARNING: Non-raw data detected. prepare_external_dataset.py expects raw counts.")
+                print("You may need to preprocess (e.g., extract_gse67980_counts.py pattern) before proceeding.")
+                if not confirm("Continue anyway? (prepare_external_dataset.py may produce wrong results)", default="n"):
+                    sys.exit(1)
+
+# ============================================================
+# STEP 5: LABEL SOURCE CONFIGURATION (for both .h5ad and text)
+# ============================================================
+    print("\n" + "=" * 70)
+    print("STEP 5: GROUND-TRUTH LABEL SOURCE")
+    print("=" * 70)
+    print("How are CTC vs non-CTC labels provided?")
+    print("  1) Separate CSV file mapping barcode -> label (--label-source file)")
+    print("  2) Encoded in cell/column names via regex (--label-source colname-regex)")
+    label_choice = input("Choose [1/2]: ").strip()
+
+    if label_choice == "1":
+        labels_path = input("  Path to labels CSV: ").strip()
+        barcode_col = input("  Barcode column name [barcode]: ").strip() or "barcode"
+        label_col = input("  Label column name [label]: ").strip() or "label"
+        positive_values = input("  Comma-separated positive label values (e.g., 'tumor,CTC'): ").strip()
+        label_args = [
+            "--label-source", "file",
+            "--labels", labels_path,
+            "--barcode-col", barcode_col,
+            "--label-col", label_col,
+            "--positive-values", positive_values,
+        ]
+    elif label_choice == "2":
+        print("  Regex-based labeling uses a JSON config with:")
+        print("    - positive_patterns: []  (optional)")
+        print("    - negative_patterns: [...]  (required)")
+        print("    - unmatched: 'exclude'|'error'|'positive'|'negative'")
+        config_path = input("  Path to label config JSON: ").strip()
+        if not Path(config_path).exists():
+            print("  Config not found. Example configs in configs/labels/")
+            if confirm("  Create a template config now?", default="y"):
+                template = {
+                    "positive_patterns": [],
+                    "negative_patterns": ["(Bcells?|Tcells?|NK|Mono|Gra|plts?)$"],
+                    "unmatched": "exclude"
+                }
+                template_path = output_dir / "label_config_template.json"
+                with open(template_path, "w") as f:
+                    json.dump(template, f, indent=2)
+                print(f"  Template written to {template_path}")
+                print("  Edit it, then re-run with --label-config pointing to it.")
+                sys.exit(0)
+            else:
+                sys.exit(1)
+        label_args = ["--label-source", "colname-regex", "--label-config", config_path]
+    else:
+        print("Invalid choice.")
         sys.exit(1)
+
+# ============================================================
+# STEP 6: RUN prepare_external_dataset.py
+# ============================================================
+    print("\n" + "=" * 70)
+    print("STEP 6: RUNNING prepare_external_dataset.py")
+    print("=" * 70)
+
+    # Build args for prepare_external_dataset.py
+    prep_args = [
+        "--counts", str(input_path),
+        "--output-dir", str(output_dir),
+    ] + label_args
+
+    print(f"\nRunning: python scripts/prepare_external_dataset.py {' '.join(prep_args)}")
+    if confirm("Execute?", default="y"):
+        result = run_script(scripts_dir / "prepare_external_dataset.py", prep_args)
+        if result.returncode != 0:
+            print("prepare_external_dataset.py failed. Check output above.")
+            sys.exit(1)
+    else:
+        print("Skipped. Run manually when ready.")
+        sys.exit(0)
+
+# ============================================================
+# STEP 7: PATIENT ID EXTRACTION (for combine_training_datasets.py)
+# ============================================================
+    print("\n" + "=" * 70)
+    print("STEP 7: PATIENT ID EXTRACTION PATTERN (for combine_training_datasets.py)")
+    print("=" * 70)
+    print("If you plan to combine this dataset with others for training,")
+    print("combine_training_datasets.py needs a patient_id extraction pattern.")
+    print("Examples:")
+    print("  gse109761: Br16_AC12 -> Br16  (regex: ^(PLT_)?([A-Za-z]+\\d+))")
+    print("  gse67980:  Pr10.1.2 -> Pr10   (regex: ^([A-Za-z]+\\d+))")
+    dataset_name = input("\nDataset name (e.g., gse109761, gse67980, zhang): ").strip()
+    patient_regex = input("Patient ID regex (capture group 1 = patient ID) [^([A-Za-z]+\\d+)]: ").strip() or r"^([A-Za-z]+\d+)"
+
+    # Save pattern for later use
+    pattern_info = {
+        "dataset_name": dataset_name,
+        "patient_id_regex": patient_regex,
+        "output_h5ad": str(output_dir / "data.h5ad"),
+    }
+    pattern_path = output_dir / "patient_id_pattern.json"
+    with open(pattern_path, "w") as f:
+        json.dump(pattern_info, f, indent=2)
+    print(f"Saved pattern to {pattern_path}")
+
+    print("\n" + "=" * 70)
+    print("DONE: Standardized dataset ready at:")
+    print(f"  {output_dir}/data.h5ad")
+    print(f"  {output_dir}/ground_truth.csv")
+    print("=" * 70)
+    print("\nNext steps:")
+    print(f"  1. Spot-check: python -c \"import scanpy as sc; a=sc.read('{output_dir}/data.h5ad'); print(a.obs[['is_ctc','epcam_status']].value_counts())\"")
+    print(f"  2. Evaluate:   python scripts/run_and_eval.py --input {output_dir}/data.h5ad --ground-truth {output_dir}/ground_truth.csv --output results/{output_dir.name}")
+    print(f"  3. Combine:    python scripts/combine_training_datasets.py --datasets {dataset_name}={output_dir}/data.h5ad ... --output data/combined_training_set.h5ad")
 
 
 if __name__ == "__main__":
