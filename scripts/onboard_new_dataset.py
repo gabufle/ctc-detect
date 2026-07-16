@@ -356,10 +356,28 @@ def main():
     # ============================================================
     if input_path.suffix == ".h5ad":
         print("\n" + "=" * 70)
-        print("STEP 2-4: SKIPPED (native .h5ad format — no text parsing needed)")
+        print("STEP 2-4: INSPECT .h5ad FILE (native format)")
         print("=" * 70)
         print("Detected .h5ad file. prepare_external_dataset.py handles this natively.")
         print("Skipping delimiter/orientation/normalization detection steps.")
+
+        # Inspect .h5ad structure
+        import scanpy as sc
+        adata = sc.read(input_path)
+        print(f"\nShape: {adata.shape[0]} cells x {adata.shape[1]} genes")
+        print(f"Barcodes (obs_names): {list(adata.obs_names[:10])}{'...' if len(adata.obs_names) > 10 else ''}")
+        print(f"Genes (var_names): {list(adata.var_names[:10])}{'...' if len(adata.var_names) > 10 else ''}")
+        print(f"Obs columns: {list(adata.obs.columns)}")
+        print(f"Var columns: {list(adata.var.columns)}")
+        print(f"X dtype: {adata.X.dtype}")
+
+        # Ask user to confirm barcodes look correct for label mapping
+        if confirm("\nDo these barcodes look correct for label mapping?", default="y"):
+            pass
+        else:
+            print("Please ensure your label CSV barcodes match these exactly.")
+            if not confirm("Continue anyway?", default="n"):
+                sys.exit(1)
     else:
         # ============================================================
         # STEP 2: COMPRESSION + DELIMITER DETECTION
