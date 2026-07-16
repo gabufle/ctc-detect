@@ -382,7 +382,7 @@ def onboard(
     if skip_merge:
         cmd.append("--skip-merge")
 
-    console.print(f"[bold]Launching interactive onboarding...[/bold]")
+    console.print("[bold]Launching interactive onboarding...[/bold]")
     console.print(f"Command: {' '.join(cmd)}\n")
 
     # Run interactively (inherit stdin/stdout/tty)
@@ -390,9 +390,9 @@ def onboard(
 
     if result.returncode == 0:
         console.print(f"\n[green]✓[/green] Onboarding complete. Results in {output_p}")
-        console.print(f"  data.h5ad")
-        console.print(f"  ground_truth.csv")
-        console.print(f"  patient_id_pattern.json")
+        console.print("  data.h5ad")
+        console.print("  ground_truth.csv")
+        console.print("  patient_id_pattern.json")
     else:
         console.print(f"\n[red]✗[/red] Onboarding exited with code {result.returncode}")
         raise SystemExit(result.returncode)
