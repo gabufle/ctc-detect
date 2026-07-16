@@ -75,11 +75,55 @@ ctc-detect model download
 | `info` | ✅ Working | System info, cached models, disk space |
 | `model list` | ✅ Working | Shows available model versions |
 | `model download` | ✅ Working | Downloads base Geneformer from HF |
+| `onboard` | ✅ Working | Interactive dataset onboarding (NEW) |
 | `run` | ❌ Gated | Needs published LoRA adapter |
 | `batch` | ❌ Gated | Same adapter gating as `run` |
 | `multi` | ❌ Gated | Same adapter gating as `run` |
 
 > **⚠️ Real CTC inference is not functional yet.** The `run`, `batch`, and `multi` commands are gated behind a `PeftModel` adapter check and will refuse to run without a proper LoRA adapter. The base Geneformer model scores near random (AUROC ~0.51). See **Project Status** and **Roadmap**.
+
+## Dataset Onboarding (Prepare External Data)
+
+Before you can evaluate or train on external datasets, they must be converted to the standardized format (`data.h5ad` + `ground_truth.csv`). The `onboard` command wraps the preparation scripts with **interactive confirmation at every judgment call**:
+
+```bash
+ctc-detect onboard --input-path <file_or_dir> --output-dir data/external/<name>
+```
+
+**What it does (7 interactive steps):**
+
+| Step | Action |
+|------|--------|
+| 1. Input shape | Detects single file vs directory of per-cell GSM files vs `.tar.gz` archive |
+| 2. Compression + delimiter | Peeks first 5 lines, counts tabs vs commas, shows preview |
+| 3. Orientation + metadata cols | Heuristics for genes×cells vs cells×genes; finds metadata columns (Entrez, uniGene, symbol, name…) before sample data; asks for gene ID column + sample start column |
+| 4. Normalization state | Peeks numeric values; classifies as raw_counts / log_cpm / tpm_fpkm / unknown; **critical warning** about silent failures |
+| 5. Label source | CSV file (barcode→label) **or** colname-regex JSON config (creates template if missing) |
+| 6. Run `prepare_external_dataset.py` | Builds exact CLI args; shows full command; asks to execute |
+| 7. Patient ID pattern | For `combine_training_datasets.py`; saves to `patient_id_pattern.json` |
+
+**Examples:**
+
+```bash
+# Single GSE67980-style file with metadata columns
+ctc-detect onboard -i data/raw/GSE67980_processed.txt -o data/external/gse67980
+
+# Directory of per-cell GSM files (runs merge_per_cell_files.py interactively)
+ctc-detect onboard -i data/raw/gse109761_raw/ -o data/external/gse109761
+
+# .tar.gz archive (lists contents, offers to extract)
+ctc-detect onboard -i data/raw/GSE123456_raw.tar.gz -o data/external/gse123456
+
+# Skip merge step for non-per-cell directories
+ctc-detect onboard -i data/raw/some_dir/ -o data/external/some_dir --skip-merge
+```
+
+**Output** in `data/external/<name>/`:
+- `data.h5ad` — AnnData with `obs['is_ctc']` and `obs['epcam_status']`
+- `ground_truth.csv` — `barcode,true_label`
+- `patient_id_pattern.json` — regex for `combine_training_datasets.py`
+
+---
 
 ### Process multiple individual files (`multi`)
 
@@ -128,10 +172,11 @@ ctc-detect/
 │   ├── main.py             # CLI entry point (Typer)
 │   │   ├── run              # Single sample processing
 │   │   ├── batch            # Directory-based batch processing
-│   │   ├── multi             # Multi-file processing (NEW)
+│   │   ├── multi             # Multi-file processing
 │   │   ├── validate          # Input validation
 │   │   ├── evaluate          # Metrics computation
 │   │   ├── info              # System information
+│   │   ├── onboard           # Interactive dataset onboarding (NEW)
 │   │   └── model             # Model management
 │   ├── detect.py           # Inference logic
 │   ├── preprocess.py       # Input format handling (extended)
