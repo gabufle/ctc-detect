@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from ctcdetect.evaluate import (
+from ctcdetect.evaluation import (
     compute_metrics,
     generate_eval_report,
     generate_eval_html_report,

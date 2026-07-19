@@ -2,7 +2,7 @@
 
 import pytest
 
-from ctcdetect.utils import validate_input_path, validate_output_path, print_banner
+from ctcdetect.cli.utils import validate_input_path, validate_output_path, print_banner
 
 
 def test_validate_input_path_exists(tmp_path):

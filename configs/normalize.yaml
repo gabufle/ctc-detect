@@ -1,0 +1,14 @@
+# CTC-Detect Normalization Configuration
+
+# Normalization parameters
+normalize:
+  # Target sum for normalize_total (1e4 = 10,000 = CPM-like)
+  target_sum: 10000
+
+  # Apply log1p after normalization
+  log1p: true
+
+  # Highly variable gene selection for UMAP (not used in tokenization)
+  highly_variable_genes:
+    n_top_genes: 2000
+    flavor: "seurat_v3"

@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 import scanpy as sc
 
-from ctcdetect.preprocess import detect_format, validate_input, load_data, SUPPORTED_FORMATS
+from ctcdetect.core.preprocess import detect_format, validate_input, load_data, SUPPORTED_FORMATS
 from ctcdetect.exceptions import InputError
 
 

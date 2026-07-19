@@ -105,3 +105,43 @@ def temp_output_dir(tmp_path):
     out = tmp_path / "outputs"
     out.mkdir(exist_ok=True)
     return out
+
+
+# Additional fixtures for the new structure
+@pytest.fixture
+def mock_adata():
+    """Create a mock AnnData object for testing."""
+    rng = np.random.default_rng(42)
+    n_cells = 100
+    n_genes = 50
+    X = rng.poisson(lam=3, size=(n_cells, n_genes)).astype(np.float32)
+    obs_names = [f"cell_{i:03d}" for i in range(n_cells)]
+    var_names = [f"gene_{i}" for i in range(n_genes)]
+
+    adata = sc.AnnData(X=X)
+    adata.obs_names = obs_names
+    adata.var_names = var_names
+    return adata
+
+
+@pytest.fixture
+def mock_tokenized_dataset():
+    """Create a mock tokenized dataset for training tests."""
+    from datasets import Dataset
+    import torch
+
+    n = 100
+    max_len = 2048
+    rng = np.random.default_rng(42)
+
+    data = {
+        "input_ids": [rng.integers(1, 1000, size=rng.integers(100, max_len)).tolist() for _ in range(n)],
+        "attention_mask": [],
+        "label": rng.integers(0, 2, size=n).tolist(),
+    }
+    # Create attention masks
+    for ids in data["input_ids"]:
+        mask = [1] * len(ids)
+        data["attention_mask"].append(mask)
+
+    return Dataset.from_dict(data)

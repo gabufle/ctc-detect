@@ -1,0 +1,27 @@
+# CTC-Detect Tokenization Configuration (Geneformer TranscriptomeTokenizer)
+
+tokenize:
+  # Geneformer model input size (max sequence length)
+  # V1 models: 2048, V2 models: 4096
+  model_input_size: 2048
+
+  # Use special tokens (CLS, etc.) - False for V1
+  special_token: false
+
+  # Collapse duplicate gene IDs (sum counts)
+  collapse_gene_ids: true
+
+  # Geneformer model version: "V1" or "V2"
+  model_version: "V1"
+
+  # Target sum for tokenizer normalization (independent of sc.pp.normalize_total)
+  target_sum: 10000
+
+  # Number of processes for parallel tokenization
+  nproc: 4
+
+  # File format for tokenizer input
+  file_format: "h5ad"
+
+  # Whether to keep uncropped input_ids
+  keep_uncropped_input_ids: false

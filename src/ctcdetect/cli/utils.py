@@ -1,4 +1,4 @@
-"""Shared utilities for CTC-Detect CLI."""
+"""CLI utilities for CTC-Detect."""
 
 import os
 from pathlib import Path
@@ -9,10 +9,7 @@ console = Console()
 
 
 def validate_input_path(path: str, description: str = "Input path") -> Path:
-    """Validate that an input path exists and is readable.
-
-    Exits with a friendly error message if the path is invalid.
-    """
+    """Validate that an input path exists and is readable."""
     p = Path(path)
     if not p.exists():
         console.print(f"[red]Error:[/red] {description} '{path}' does not exist.")
@@ -24,11 +21,7 @@ def validate_input_path(path: str, description: str = "Input path") -> Path:
 
 
 def validate_output_path(path: str, description: str = "Output path") -> Path:
-    """Validate that an output path can be written to.
-
-    Creates parent directories if needed. Exits with a friendly error
-    message if the path is not writable.
-    """
+    """Validate that an output path can be written to."""
     p = Path(path)
     parent = p.parent
     if parent and not parent.exists():
@@ -49,3 +42,10 @@ def print_banner() -> None:
         "Circulating Tumor Cell Detection from scRNA-seq"
     )
     console.print("Powered by Geneformer\n")
+
+
+__all__ = [
+    "validate_input_path",
+    "validate_output_path",
+    "print_banner",
+]

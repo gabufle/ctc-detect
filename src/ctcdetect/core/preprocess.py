@@ -1,4 +1,4 @@
-"""Input format handling for CTC-Detect.
+"""Input format handling and preprocessing for CTC-Detect.
 
 Handles reading and validating various single-cell RNA-seq input formats
 produced by Cell Ranger and other pipelines.
@@ -9,16 +9,16 @@ tokenization settings are loaded from configs/preprocess.yaml.
 
 from pathlib import Path
 
-import scanpy as sc
 import pandas as pd
+import scanpy as sc
 from rich.console import Console
 
+from ctcdetect.config import get_config_value
 from ctcdetect.exceptions import (
+    GeneMappingError,
     InputError,
     ValidationError,
-    GeneMappingError,
 )
-from ctcdetect.config import get_config_value
 
 console = Console()
 
@@ -32,32 +32,6 @@ SUPPORTED_FORMATS = {
     "mtx": "Matrix Market Exchange format (.mtx)",
     "loom": "Loom file format (.loom)",
 }
-
-
-def _get_int(key: str, default: int) -> int:
-    """Get config value as int."""
-    val = get_config_value(key, default)
-    if val is None:
-        return default
-    return int(val)
-
-
-def _get_float(key: str, default: float) -> float:
-    """Get config value as float."""
-    val = get_config_value(key, default)
-    if val is None:
-        return default
-    return float(val)
-
-
-def _get_bool(key: str, default: bool) -> bool:
-    """Get config value as bool."""
-    val = get_config_value(key, default)
-    if isinstance(val, bool):
-        return val
-    if isinstance(val, str):
-        return val.lower() in ("true", "yes", "1", "on")
-    return bool(val) if val is not None else default
 
 
 def detect_format(input_path: Path) -> str:
@@ -247,70 +221,43 @@ def _validate_h5ad(input_path: Path):
                 "Dataset contains 0 genes.",
                 failed_check="h5ad_empty_genes",
             )
-
-        # Check for gene names
-        sample_genes = list(adata.var_names[:100])
-        alphabetic = sum(1 for g in sample_genes if g and g[0].isalpha())
-        if alphabetic < 10 and len(sample_genes) > 0:
-            console.print(
-                f"[yellow]Warning:[/yellow] Gene names look unusual "
-                f"(only {alphabetic}/{len(sample_genes)} start with letters)."
-            )
-            console.print("  Sample genes:", ", ".join(sample_genes[:10]))
-
-        # Check for expression data
-        if adata.X is None:
-            raise ValidationError(
-                "No expression matrix (.X) found in h5ad file.",
-                failed_check="h5ad_no_expression",
-            )
-
     except ValidationError:
         raise
     except Exception as e:
         raise ValidationError(
-            f"Could not read h5ad file: {e}",
+            f"Could not load .h5ad file: {e}",
             failed_check="h5ad_load",
-            hint="The file may be corrupted or not a valid AnnData file.",
+            hint="The file may be corrupted or in an unexpected format.",
         ) from e
 
 
 def _validate_csv(input_path: Path, fmt: str):
-    """Validate a CSV/TSV matrix file."""
-    file_size_mb = input_path.stat().st_size / (1024 * 1024)
-    console.print(f"  File size: {file_size_mb:.1f} MB")
+    """Validate a CSV/TSV/TXT matrix file."""
+    sep = "\t" if fmt in ("tsv", "txt") else ","
 
     try:
-        sep = "\t" if fmt in ("tsv", "txt") else ","
-        df = pd.read_csv(input_path, index_col=0, nrows=5, sep=sep)
-        console.print(f"  Preview shape: {df.shape[0]} rows x {df.shape[1]} columns")
-        console.print(f"  First row names: {list(df.index[:5])}")
-        console.print(f"  First column names: {list(df.columns[:5])}")
-
-        if df.shape[0] == 0 or df.shape[1] == 0:
-            raise ValidationError(
-                "CSV file appears to be empty.",
-                failed_check="csv_empty",
-            )
-
-    except ValidationError:
-        raise
+        df = pd.read_csv(input_path, sep=sep, nrows=5)
+        console.print(f"  Preview shape (first 5 rows): {df.shape}")
+        console.print(f"  Columns: {list(df.columns[:10])}{'...' if len(df.columns) > 10 else ''}")
     except Exception as e:
         raise ValidationError(
-            f"Could not read CSV file: {e}",
-            failed_check="csv_load",
-            hint=f"Ensure the file is a valid {fmt.upper()} with genes as rows and cells as columns.",
+            f"Could not parse {fmt} file: {e}",
+            failed_check="csv_parse",
+            hint=f"Check delimiter and file encoding. Expected {sep}-separated.",
         ) from e
 
 
 def load_data(input_path: Path) -> sc.AnnData:
-    """Load single-cell data from supported formats into an AnnData object.
+    """Load data from various formats into AnnData.
 
     Args:
-        input_path: Path to the input file or directory.
+        input_path: Path to input file or directory.
 
     Returns:
-        AnnData object containing the data.
+        AnnData object.
+
+    Raises:
+        ValidationError: If format is unsupported or loading fails.
     """
     fmt = detect_format(input_path)
 
@@ -320,40 +267,24 @@ def load_data(input_path: Path) -> sc.AnnData:
         else:
             mtx_dir = input_path
         adata = sc.read_10x_mtx(
-            str(mtx_dir), var_names="gene_symbols", cache=True, make_unique=True
+            str(mtx_dir), var_names="gene_symbols", cache=True
         )
-
     elif fmt == "h5ad":
-        adata = sc.read_h5ad(input_path)
-
+        adata = sc.read_h5ad(str(input_path))
     elif fmt == "csv":
         df = pd.read_csv(input_path, index_col=0)
+        # Assume genes x cells, transpose to cells x genes
         adata = sc.AnnData(df.T)
-        adata.var_names = df.index.astype(str)
-        adata.obs_names = df.columns.astype(str)
-
     elif fmt == "tsv":
-        df = pd.read_csv(input_path, index_col=0, sep="\t")
+        df = pd.read_csv(input_path, sep="\t", index_col=0)
         adata = sc.AnnData(df.T)
-        adata.var_names = df.index.astype(str)
-        adata.obs_names = df.columns.astype(str)
-
     elif fmt == "txt":
-        df = pd.read_csv(input_path, index_col=0, sep=r"\s+")
+        df = pd.read_csv(input_path, sep=None, engine="python", index_col=0)
         adata = sc.AnnData(df.T)
-        adata.var_names = df.index.astype(str)
-        adata.obs_names = df.columns.astype(str)
-
     elif fmt == "mtx":
-        from scipy.io import mmread
-        matrix = mmread(input_path)
-        adata = sc.AnnData(matrix.T)
-        adata.var_names = [f"Gene_{i}" for i in range(adata.shape[1])]
-        adata.obs_names = [f"Cell_{i}" for i in range(adata.shape[0])]
-
+        adata = sc.read_10x_mtx(str(input_path), var_names="gene_symbols")
     elif fmt == "loom":
         adata = sc.read_loom(input_path)
-
     else:
         raise ValidationError(
             f"Unsupported format for loading: {fmt}",
@@ -367,8 +298,8 @@ def load_data(input_path: Path) -> sc.AnnData:
 def run_qc(adata: sc.AnnData) -> sc.AnnData:
     """Run quality control filtering on AnnData.
 
-    Uses thresholds from configs/preprocess.yaml:
-    - min_genes, max_genes, max_pct_mt
+    Uses thresholds from config:
+    - min_genes, max_genes, max_pct_mt, min_counts, max_counts
 
     Args:
         adata: AnnData object to filter.
@@ -387,11 +318,15 @@ def run_qc(adata: sc.AnnData) -> sc.AnnData:
     min_genes = get_config_value("qc.min_genes", 200)
     max_genes = get_config_value("qc.max_genes", 6000)
     max_pct_mt = get_config_value("qc.max_pct_mt", 20)
+    min_counts = get_config_value("qc.min_counts", 500)
+    max_counts = get_config_value("qc.max_counts", 50000)
 
     adata = adata[
         (adata.obs["n_genes_by_counts"] >= min_genes)
         & (adata.obs["n_genes_by_counts"] <= max_genes)
-        & (adata.obs["pct_counts_mt"] <= max_pct_mt),
+        & (adata.obs["pct_counts_mt"] <= max_pct_mt)
+        & (adata.obs["total_counts"] >= min_counts)
+        & (adata.obs["total_counts"] <= max_counts),
         :,
     ].copy()
 
@@ -412,7 +347,7 @@ def run_qc(adata: sc.AnnData) -> sc.AnnData:
 def normalize(adata: sc.AnnData) -> sc.AnnData:
     """Normalize and log-transform the data.
 
-    Uses parameters from configs/preprocess.yaml:
+    Uses parameters from config:
     - target_sum, log1p
 
     Args:
@@ -434,7 +369,7 @@ def normalize(adata: sc.AnnData) -> sc.AnnData:
 def map_genes_to_ensembl(adata: sc.AnnData, gene_mapping: dict) -> sc.AnnData:
     """Map gene symbols to Ensembl IDs.
 
-    Uses thresholds from configs/preprocess.yaml:
+    Uses thresholds from config:
     - min_mapped_fraction, require_mapped, warn_on_low_mapping
 
     Args:
@@ -508,3 +443,14 @@ def map_genes_to_ensembl(adata: sc.AnnData, gene_mapping: dict) -> sc.AnnData:
         )
 
     return adata
+
+
+__all__ = [
+    "SUPPORTED_FORMATS",
+    "detect_format",
+    "validate_input",
+    "load_data",
+    "run_qc",
+    "normalize",
+    "map_genes_to_ensembl",
+]

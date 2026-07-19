@@ -1,0 +1,23 @@
+# CTC-Detect Quality Control Configuration
+
+# Quality Control (QC) filtering thresholds
+qc:
+  # Minimum number of genes detected per cell (n_genes_by_counts)
+  min_genes: 200
+
+  # Maximum number of genes detected per cell (filters doublets/multiplets)
+  max_genes: 6000
+
+  # Maximum percentage of mitochondrial gene counts
+  # High MT% indicates dying/stressed cells
+  max_pct_mt: 20.0
+
+  # Optional: filter by total UMI counts
+  min_counts: 500
+  max_counts: 50000
+
+  # Minimum number of cells to keep after QC filtering
+  min_cells: 10
+
+  # Optional: filter by ribosomal gene percentage
+  # max_pct_ribo: 50.0

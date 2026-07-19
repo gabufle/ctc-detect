@@ -158,49 +158,88 @@ See `notebooks/ctc_detect_colab.ipynb` for the full training workflow (Google Co
 5. LoRA fine-tuning
 6. Evaluation and visualization
 
-To train locally:
+To train locally (programmatic API):
 
-```bash
-python src/ctcdetect/train_geneformer.py
+```python
+from ctcdetect.training import train_model
+from ctcdetect.data import prepare_external_dataset
+
+# Prepare data first, then train
+train_model(
+    train_dataset="data/tokenized/train_dataset",
+    val_dataset="data/tokenized/val_dataset",
+    base_model_path="Geneformer/Geneformer-V1-10M",
+    output_dir="results/checkpoints/best_model",
+)
 ```
 
 ## Project Structure
 
 ```
 ctc-detect/
-├── src/ctcdetect/          # Source code
-│   ├── main.py             # CLI entry point (Typer)
-│   │   ├── run              # Single sample processing
-│   │   ├── batch            # Directory-based batch processing
-│   │   ├── multi             # Multi-file processing
-│   │   ├── validate          # Input validation
-│   │   ├── evaluate          # Metrics computation
-│   │   ├── info              # System information
-│   │   ├── onboard           # Interactive dataset onboarding (NEW)
-│   │   └── model             # Model management
-│   ├── detect.py           # Inference logic
-│   ├── preprocess.py       # Input format handling (extended)
-│   ├── evaluate.py         # Metrics computation
-│   ├── report.py           # Report generation
-│   ├── visualize.py        # UMAP plots
-│   ├── config.py           # Model registry and config
-│   ├── utils.py            # Shared utilities
-│   └── train_geneformer.py # Training script
-├── tests/                  # Test suite (98 tests, 85% coverage)
-│   ├── test_main.py
-│   ├── test_detect.py
-│   ├── test_preprocess.py
-│   ├── test_evaluate.py
-│   ├── test_report.py
-│   ├── test_visualize.py
-│   ├── test_extra.py
-│   ├── test_main_mocked.py
-│   └── conftest.py
+├── src/ctcdetect/           # Source code (package)
+│   ├── __init__.py          # Public API
+│   ├── cli/                 # CLI commands (Typer)
+│   │   ├── app.py           # App factory
+│   │   ├── utils.py         # CLI utilities
+│   │   └── commands/        # Individual commands
+│   │       ├── run.py       # run, batch, multi
+│   │       ├── validate.py
+│   │       ├── evaluate.py
+│   │       ├── info.py
+│   │       ├── model.py
+│   │       └── onboard.py
+│   ├── core/                # Detection pipeline
+│   │   ├── detect.py        # run_detection, tokenization, inference
+│   │   ├── model.py         # Model loading, adapter validation
+│   │   ├── preprocess.py    # Format detection, QC, normalization
+│   │   └── pipeline.py      # CTCDetectionPipeline orchestration
+│   ├── evaluation/          # Metrics, reports, plots
+│   │   ├── metrics.py       # compute_metrics
+│   │   ├── reports.py       # generate_report, generate_html_report
+│   │   └── plots.py         # generate_umap, plot_roc_pr
+│   ├── config/              # Configuration system
+│   │   ├── loader.py        # load_config, get_config
+│   │   ├── paths.py         # Path constants
+│   │   ├── registry.py      # Model registry
+│   │   ├── system.py        # get_system_info
+│   │   └── schemas.py       # Pydantic validation schemas
+│   ├── training/            # Fine-tuning pipeline
+│   │   ├── trainer.py       # train_model, create_lora_config
+│   │   └── data.py          # Training data preparation
+│   ├── data/                # Data loading & onboarding
+│   │   └── onboarding.py    # Onboarding utilities
+│   ├── extensions/          # Model backend plugin interface
+│   │   └── geneformer.py    # GeneformerBackend
+│   └── exceptions.py        # Custom exception hierarchy
+├── tests/                   # Test suite (98 tests, ~85% coverage)
+│   ├── unit/                # Unit tests mirroring src structure
+│   ├── integration/         # Integration tests
+│   └── fixtures/            # Test fixtures
 ├── notebooks/               # Jupyter notebooks
 │   └── ctc_detect_colab.ipynb
+├── configs/                 # Configuration files (YAML)
+│   ├── preprocess.yaml      # Main config (includes all sub-configs)
+│   ├── qc.yaml
+│   ├── normalize.yaml
+│   ├── gene_mapping.yaml
+│   ├── tokenize.yaml
+│   ├── umap.yaml
+│   ├── inference.yaml
+│   └── output.yaml
+├── data/
+│   ├── raw/                 # Raw input data
+│   ├── external/            # Onboarded datasets
+│   └── processed/           # Processed training data
+├── scripts/                 # Legacy scripts (kept for compatibility)
+│   ├── onboard_new_dataset.py
+│   ├── prepare_external_dataset.py
+│   ├── combine_training_datasets.py
+│   └── merge_per_cell_files.py
 ├── .github/workflows/      # CI/CD (lint, test, typecheck)
 ├── pyproject.toml          # Package config and dependencies
 ├── Makefile                # Test runner targets
+├── Dockerfile              # Multi-stage Docker build
 └── README.md
 ```
 
@@ -227,9 +266,9 @@ ctc-detect/
 
 3. **No external or held-out validation dataset.** All evaluation uses an internal split of the same source studies (CTC cells all from Pauken 2021). The model has not been tested on any external/independent CTC dataset, nor on different cancer types, sequencing platforms, or patient populations.
 
-4. **Class imbalance is not clinically realistic.** The test set is 76% CTC, but in a real blood sample, CTCs are vanishingly rare (often 1 in 10^6 to 10^7 blood cells). The reported metrics would look very different at clinically relevant frequencies -- false positives would dominate.
+4. **Class imbalance is not clinically realistic.** The test set is 76% CTC, but in a real blood sample, CTCs are vanishingly rare (often 1 in 10^6 to 10^7 blood cells). The reported metrics would look very different at clinically relevant frequencies — false positives would dominate.
 
-5. **EpCAM-high sensitivity is modest.** The model detects 66.7% of EpCAM-high CTCs, but this is based on only 18 cells in the test set, so the estimate is imprecise (95% CI: 41% -- 87%).
+5. **EpCAM-high sensitivity is modest.** The model detects 66.7% of EpCAM-high CTCs, but this is based on only 18 cells in the test set, so the estimate is imprecise (95% CI: 41% — 87%).
 
 6. **Limited non-CTC diversity.** Non-CTC cells come from healthy PBMC only. The model has not been tested against activated lymphocytes, circulating endothelial cells, or other cell types found in cancer patient blood.
 

@@ -1,18 +1,18 @@
-"""Visualization module for CTC-Detect.
+"""Visualization and plotting utilities for CTC-Detect.
 
-Generates UMAP plots for QC and result interpretation.
-Uses scanpy's UMAP implementation on expression data.
+Generates UMAP plots, ROC/PR curves, and score distributions.
 """
 
 from pathlib import Path
 
-import scanpy as sc
-import pandas as pd
-import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import scanpy as sc
 from matplotlib.colors import ListedColormap
+from matplotlib.lines import Line2D
 from rich.console import Console
 
 console = Console()
@@ -94,7 +94,6 @@ def generate_umap(
             c=umap_preds[valid], cmap=cmap, s=3, alpha=0.7,
         )
         # Legend
-        from matplotlib.lines import Line2D
         legend_elements = [
             Line2D([0], [0], marker="o", color="w", markerfacecolor="#2196F3",
                    markersize=8, label="Non-CTC (0)"),
@@ -141,3 +140,82 @@ def generate_umap(
     plt.close()
 
     console.print(f"  UMAP saved to {output_path}")
+
+
+def plot_roc_pr(metrics: dict, output_path: Path) -> None:
+    """Generate ROC and PR curve PNG plots.
+
+    Args:
+        metrics: Output from ``compute_metrics`` (must contain curve data).
+        output_path: Directory to write ``roc.png`` and ``pr.png``.
+    """
+    # ROC curve
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.plot(metrics["fpr"], metrics["tpr"], "b-", linewidth=2,
+            label=f"AUROC = {metrics['auroc']:.4f}")
+    ax.plot([0, 1], [0, 1], "k--", alpha=0.5, label="Random")
+    ax.fill_between(metrics["fpr"], metrics["tpr"], alpha=0.1, color="blue")
+    ax.set_xlabel("False Positive Rate")
+    ax.set_ylabel("True Positive Rate (Sensitivity)")
+    ax.set_title("ROC Curve")
+    ax.legend(loc="lower right")
+    ax.grid(True, alpha=0.3)
+    roc_path = output_path / "roc.png"
+    fig.savefig(str(roc_path), dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+    # PR curve
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.plot(metrics["recall_curve"], metrics["precision_curve"],
+            "r-", linewidth=2, label=f"AUPRC = {metrics['auprc']:.4f}")
+    baseline = metrics["prevalence"]
+    ax.axhline(y=baseline, color="k", linestyle="--", alpha=0.5,
+               label=f"Baseline = {baseline:.4f}")
+    ax.fill_between(metrics["recall_curve"], metrics["precision_curve"],
+                    alpha=0.1, color="red")
+    ax.set_xlabel("Recall (Sensitivity)")
+    ax.set_ylabel("Precision (PPV)")
+    ax.set_title("Precision-Recall Curve")
+    ax.legend(loc="upper right")
+    ax.grid(True, alpha=0.3)
+    pr_path = output_path / "pr.png"
+    fig.savefig(str(pr_path), dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+    console.print(f"  ROC curve saved to {roc_path}")
+    console.print(f"  PR curve saved to {pr_path}")
+
+
+def plot_score_distribution(
+    scores: np.ndarray,
+    output_path: Path,
+    threshold: float = 0.5,
+    title: str = "CTC Probability Score Distribution",
+) -> None:
+    """Generate a histogram of CTC probability scores.
+
+    Args:
+        scores: Array of CTC probability scores.
+        output_path: Path to write the figure.
+        threshold: Classification threshold to mark on plot.
+        title: Plot title.
+    """
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.hist(scores, bins=50, color="steelblue", edgecolor="white", alpha=0.8)
+    ax.axvline(x=threshold, color="red", linestyle="--", label=f"Threshold ({threshold})")
+    ax.set_xlabel("CTC Probability")
+    ax.set_ylabel("Number of Cells")
+    ax.set_title(title)
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    fig.savefig(str(output_path), dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+    console.print(f"  Score distribution saved to {output_path}")
+
+
+__all__ = [
+    "generate_umap",
+    "plot_roc_pr",
+    "plot_score_distribution",
+]

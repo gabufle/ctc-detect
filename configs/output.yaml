@@ -1,0 +1,15 @@
+# CTC-Detect Output Configuration
+
+output:
+  # Save intermediate AnnData after preprocessing
+  save_preprocessed: false
+
+  # Save tokenized dataset
+  save_tokenized: false
+
+  # Save raw logits in addition to probabilities
+  save_logits: false
+
+  # Compression for output CSVs
+  # null, "gzip", "bz2", "xz"
+  compression: null

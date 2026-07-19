@@ -1,0 +1,15 @@
+# CTC-Detect UMAP Visualization Configuration
+
+umap:
+  # Number of highly variable genes for UMAP
+  n_top_genes: 2000
+
+  # UMAP parameters
+  n_neighbors: 15
+  min_dist: 0.5
+  spread: 1.0
+  random_state: 42
+
+  # Number of panels in visualization
+  # 4 = probability, prediction, uncertainty, expression overlay
+  n_panels: 4

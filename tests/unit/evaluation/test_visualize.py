@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 
-from ctcdetect.visualize import generate_umap
+from ctcdetect.evaluation.plots import generate_umap
 
 
 def test_generate_umap(temp_output_dir):

@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 from typer.testing import CliRunner
 
-from ctcdetect.main import app
+from ctcdetect.cli.app import app
 
 runner = CliRunner()
 
@@ -136,7 +136,7 @@ def test_info_command_shows_version():
 
 def test_detect_format_cellranger(tmp_path):
     """Create temp dir with matrix.mtx → 'cellranger'."""
-    from ctcdetect.preprocess import detect_format
+    from ctcdetect.core.preprocess import detect_format
     
     # Create Cell Ranger-like directory structure
     cr_dir = tmp_path / "cellranger_output"
@@ -150,7 +150,7 @@ def test_detect_format_cellranger(tmp_path):
 
 def test_detect_format_cellranger_nested(tmp_path):
     """Create temp dir with filtered_feature_bc_matrix/ → 'cellranger'."""
-    from ctcdetect.preprocess import detect_format
+    from ctcdetect.core.preprocess import detect_format
     
     cr_dir = tmp_path / "sample_output"
     cr_dir.mkdir()
@@ -163,7 +163,7 @@ def test_detect_format_cellranger_nested(tmp_path):
 
 def test_detect_format_h5ad(tmp_path):
     """Create .h5ad file → 'h5ad'."""
-    from ctcdetect.preprocess import detect_format
+    from ctcdetect.core.preprocess import detect_format
     import scanpy as sc
     
     h5ad_path = tmp_path / "test.h5ad"
@@ -177,7 +177,7 @@ def test_detect_format_h5ad(tmp_path):
 
 def test_detect_format_csv(tmp_path):
     """Create .csv file → 'csv'."""
-    from ctcdetect.preprocess import detect_format
+    from ctcdetect.core.preprocess import detect_format
     
     csv_path = tmp_path / "test.csv"
     csv_path.touch()
@@ -187,7 +187,7 @@ def test_detect_format_csv(tmp_path):
 
 def test_detect_format_tsv(tmp_path):
     """Create .tsv file → 'tsv'."""
-    from ctcdetect.preprocess import detect_format
+    from ctcdetect.core.preprocess import detect_format
     
     tsv_path = tmp_path / "test.tsv"
     tsv_path.touch()
@@ -197,7 +197,7 @@ def test_detect_format_tsv(tmp_path):
 
 def test_detect_format_unknown(tmp_path):
     """Unknown extension should raise InputError."""
-    from ctcdetect.preprocess import detect_format
+    from ctcdetect.core.preprocess import detect_format
     from ctcdetect.exceptions import InputError
     
     unknown_path = tmp_path / "test.xyz"
@@ -209,7 +209,7 @@ def test_detect_format_unknown(tmp_path):
 
 def test_detect_format_nonexistent():
     """Non-existent path should raise InputError."""
-    from ctcdetect.preprocess import detect_format
+    from ctcdetect.core.preprocess import detect_format
     from ctcdetect.exceptions import InputError
     
     with pytest.raises(InputError):
@@ -218,7 +218,7 @@ def test_detect_format_nonexistent():
 
 def test_load_data_csv(tmp_path):
     """load_data should return AnnData for CSV."""
-    from ctcdetect.preprocess import load_data
+    from ctcdetect.core.preprocess import load_data
     
     csv_path = tmp_path / "test.csv"
     df = pd.DataFrame(
@@ -234,7 +234,7 @@ def test_load_data_csv(tmp_path):
 
 def test_load_data_h5ad(tmp_path):
     """load_data should return AnnData for h5ad."""
-    from ctcdetect.preprocess import load_data
+    from ctcdetect.core.preprocess import load_data
     import scanpy as sc
     
     h5ad_path = tmp_path / "test.h5ad"
@@ -249,7 +249,7 @@ def test_load_data_h5ad(tmp_path):
 
 def test_validate_input_csv(tmp_path):
     """validate_input should return True for valid CSV."""
-    from ctcdetect.preprocess import validate_input
+    from ctcdetect.core.preprocess import validate_input
     
     csv_path = tmp_path / "test.csv"
     df = pd.DataFrame(
@@ -264,7 +264,7 @@ def test_validate_input_csv(tmp_path):
 
 def test_validate_input_h5ad(tmp_path):
     """validate_input should return True for valid h5ad."""
-    from ctcdetect.preprocess import validate_input
+    from ctcdetect.core.preprocess import validate_input
     import scanpy as sc
     
     h5ad_path = tmp_path / "test.h5ad"
@@ -396,7 +396,7 @@ def test_multi_command_with_valid_files(tmp_path):
         pytest.skip("torch not available, skipping multi command tests")
     
     # Import detect module so it's available for patching
-    from ctcdetect import detect
+    from ctcdetect.core import detect
     
     # Mock the run_detection function at its source module
     with patch("ctcdetect.detect.run_detection") as mock_run:
@@ -436,7 +436,7 @@ def test_multi_command_with_threshold(tmp_path):
         pytest.skip("torch not available, skipping multi command tests")
     
     # Import detect module so it's available for patching
-    from ctcdetect import detect
+    from ctcdetect.core import detect
     
     # Mock the run_detection function at its source module
     with patch("ctcdetect.detect.run_detection") as mock_run:

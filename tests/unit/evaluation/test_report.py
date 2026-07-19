@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from ctcdetect.report import generate_report, generate_html_report
+from ctcdetect.evaluation.reports import generate_report, generate_html_report
 
 
 @pytest.fixture

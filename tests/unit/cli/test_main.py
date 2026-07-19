@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 from typer.testing import CliRunner
 
-from ctcdetect.main import app
+from ctcdetect.cli.app import app
 
 runner = CliRunner()
 

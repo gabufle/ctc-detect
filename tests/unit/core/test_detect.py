@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 import scanpy as sc
 
-from ctcdetect.detect import _resolve_model_dir, _check_geneformer, CHECKPOINT_DIR, FINETUNED_DIR
+from ctcdetect.core.model import _resolve_model_dir, _check_geneformer, CHECKPOINT_DIR, FINETUNED_DIR
 
 
 def test_prepare_adata_csv(tmp_path):

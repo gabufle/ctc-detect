@@ -1,0 +1,13 @@
+# CTC-Detect Gene Mapping Configuration
+
+# Gene symbol to Ensembl ID mapping
+gene_mapping:
+  # If True, require all genes to map (strict mode)
+  # If False, drop unmapped genes with a warning
+  strict: false
+
+  # Minimum fraction of genes that must map successfully
+  min_mapping_rate: 0.1
+
+  # Warn if mapping rate below this threshold
+  warn_mapping_rate: 0.5
