@@ -1,11 +1,10 @@
 """Info command for CTC-Detect CLI."""
 
+
 import typer
-from pathlib import Path
-from rich.console import Console
 from rich.table import Table
 
-from ctcdetect.cli.utils import print_banner, console
+from ctcdetect.cli.utils import console, print_banner
 from ctcdetect.config import get_system_info
 
 

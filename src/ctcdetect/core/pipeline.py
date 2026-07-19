@@ -4,9 +4,10 @@ Provides a clean, configurable API for running the full detection pipeline
 with customizable components.
 """
 
-from pathlib import Path
-from typing import Optional, Callable, Any
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
 
 import pandas as pd
 import scanpy as sc
@@ -15,17 +16,17 @@ from rich.console import Console
 from ctcdetect.config import get_config
 from ctcdetect.core import (
     detect_format,
-    validate_input,
     load_data,
-    run_qc,
-    normalize,
     map_genes_to_ensembl,
+    normalize,
+    run_qc,
+    validate_input,
 )
-from ctcdetect.core.model import load_model, check_geneformer_available
+from ctcdetect.core.model import check_geneformer_available, load_model
 from ctcdetect.evaluation import (
-    generate_umap,
-    generate_report,
     generate_html_report,
+    generate_report,
+    generate_umap,
 )
 
 console = Console()
@@ -38,12 +39,12 @@ class PipelineConfig:
     threshold: float = 0.5
     skip_umap: bool = False
     skip_reports: bool = False
-    cancer_type: Optional[str] = None
+    cancer_type: str | None = None
     # Custom hooks
-    on_preprocess: Optional[Callable[[sc.AnnData], sc.AnnData]] = None
-    on_tokenize: Optional[Callable[[Any], Any]] = None
-    on_inference: Optional[Callable[[Any, Any], Any]] = None
-    on_results: Optional[Callable[[pd.DataFrame], pd.DataFrame]] = None
+    on_preprocess: Callable[[sc.AnnData], sc.AnnData] | None = None
+    on_tokenize: Callable[[Any], Any] | None = None
+    on_inference: Callable[[Any, Any], Any] | None = None
+    on_results: Callable[[pd.DataFrame], pd.DataFrame] | None = None
 
 
 @dataclass
@@ -72,8 +73,8 @@ class CTCDetectionPipeline:
 
     def __init__(
         self,
-        config: Optional[PipelineConfig] = None,
-        config_path: Optional[Path] = None,
+        config: PipelineConfig | None = None,
+        config_path: Path | None = None,
     ):
         """Initialize the pipeline.
 
@@ -94,9 +95,9 @@ class CTCDetectionPipeline:
         self,
         input_path: Path,
         output_path: Path,
-        cancer_type: Optional[str] = None,
-        threshold: Optional[float] = None,
-        skip_umap: Optional[bool] = None,
+        cancer_type: str | None = None,
+        threshold: float | None = None,
+        skip_umap: bool | None = None,
     ) -> PipelineResults:
         """Run the full detection pipeline.
 
@@ -138,8 +139,9 @@ class CTCDetectionPipeline:
         adata = normalize(adata)
 
         # Map gene symbols to Ensembl IDs
-        from ctcdetect.config.paths import GENE_MAPPING
         import pickle
+
+        from ctcdetect.config.paths import GENE_MAPPING
         with open(GENE_MAPPING, "rb") as f:
             gene_mapping = pickle.load(f)
         adata = map_genes_to_ensembl(adata, gene_mapping)
@@ -156,8 +158,9 @@ class CTCDetectionPipeline:
 
         # Step 5: Tokenize and inference
         console.print("[bold]Step 5/6:[/bold] Tokenizing and running inference...")
-        from ctcdetect.core.detect import _tokenize, _run_inference
-        from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
+        from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
+
+        from ctcdetect.core.detect import _run_inference, _tokenize
 
         with Progress(
             SpinnerColumn(),
@@ -271,7 +274,7 @@ class CTCDetectionPipeline:
 def run_detection(
     input_path: Path,
     output_path: Path,
-    cancer_type: Optional[str] = None,
+    cancer_type: str | None = None,
     threshold: float = 0.5,
     skip_umap: bool = False,
 ) -> PipelineResults:

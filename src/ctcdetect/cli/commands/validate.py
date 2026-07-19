@@ -1,9 +1,9 @@
 """Validate command for CTC-Detect CLI."""
 
-import typer
-from pathlib import Path
 
-from ctcdetect.cli.utils import validate_input_path, print_banner, console
+import typer
+
+from ctcdetect.cli.utils import console, print_banner, validate_input_path
 from ctcdetect.core.preprocess import validate_input
 
 validate_app = typer.Typer(
@@ -31,7 +31,6 @@ def validate(
     print_banner()
     input_path = validate_input_path(input, "Input path")
 
-    from ctcdetect.core.preprocess import validate_input
     validate_input(input_path)
 
     console.print(f"\n[green]✓[/green] Input data looks good: {input_path}")

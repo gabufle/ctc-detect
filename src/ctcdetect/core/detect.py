@@ -7,7 +7,6 @@ import os
 import pickle
 import tempfile
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -17,22 +16,20 @@ from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 
 from ctcdetect.config.paths import (
-    CHECKPOINT_DIR,
-    FINETUNED_DIR,
     GENE_MAPPING,
+    GENE_MEDIAN,
     GENEFORMER_DIR,
     TOKEN_DICT,
-    GENE_MEDIAN,
 )
 from ctcdetect.core.model import _load_model, _resolve_model_dir, check_geneformer_available
 from ctcdetect.core.preprocess import (
     detect_format,
-    run_qc,
-    normalize,
     map_genes_to_ensembl,
+    normalize,
+    run_qc,
 )
 from ctcdetect.evaluation.plots import generate_umap
-from ctcdetect.evaluation.reports import generate_report, generate_html_report
+from ctcdetect.evaluation.reports import generate_html_report, generate_report
 
 console = Console()
 
@@ -221,7 +218,7 @@ def _run_inference(model, device, dataset, progress: Progress, task):
 def run_detection(
     input_path: Path,
     output_path: Path,
-    cancer_type: Optional[str] = None,
+    cancer_type: str | None = None,
     threshold: float = 0.5,
     skip_umap: bool = False,
 ):

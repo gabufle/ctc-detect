@@ -5,13 +5,13 @@ data.h5ad + ground_truth.csv by chaining existing prep scripts with
 human confirmation at every judgment call.
 """
 
-import typer
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 
-from ctcdetect.cli.utils import validate_input_path, validate_output_path, print_banner, console
+import typer
 
+from ctcdetect.cli.utils import console, print_banner, validate_input_path, validate_output_path
 
 onboard_app = typer.Typer(
     name="onboard",

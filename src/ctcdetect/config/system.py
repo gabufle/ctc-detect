@@ -14,7 +14,6 @@ from ctcdetect.config.registry import MODEL_REGISTRY
 
 def get_system_info() -> dict:
     """Return a dict of system information for the ``info`` command."""
-    import platform
 
     info = {
         "version": "0.1.0",
@@ -43,7 +42,7 @@ def get_system_info() -> dict:
         pass
 
     available_models = []
-    for alias, meta in MODEL_REGISTRY.items():
+    for alias, _meta in MODEL_REGISTRY.items():
         cache_path = MODEL_CACHE_DIR / alias
         if cache_path.exists() and any(cache_path.iterdir()):
             available_models.append(alias)

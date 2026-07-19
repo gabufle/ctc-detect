@@ -4,11 +4,8 @@ Handles dataset loading, tokenization, and splitting for Geneformer fine-tuning.
 """
 
 from pathlib import Path
-from typing import Tuple, Optional
-import json
 
 import numpy as np
-import pandas as pd
 import scanpy as sc
 from datasets import Dataset
 from sklearn.model_selection import train_test_split
@@ -34,7 +31,7 @@ def split_data(
     val_size: float = 0.1,
     random_state: int = 42,
     stratify_by: str = "patient_id",
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Split data into train/val/test with patient-level grouping.
 
     Args:
@@ -48,7 +45,7 @@ def split_data(
         Tuple of (train_idx, val_idx, test_idx) arrays.
     """
     n = adata.shape[0]
-    indices = np.arange(n)
+    np.arange(n)
 
     # Group by patient_id to ensure no patient appears in multiple splits
     patient_ids = adata.obs[stratify_by].values
@@ -92,7 +89,7 @@ def prepare_training_data(
     output_dir: Path,
     model_input_size: int = 2048,
     nproc: int = 4,
-) -> Tuple[Dataset, Dataset, Dataset]:
+) -> tuple[Dataset, Dataset, Dataset]:
     """Prepare tokenized datasets for training.
 
     Args:

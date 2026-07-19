@@ -12,90 +12,90 @@ Public API:
 - ctcdetect.extensions: Model backend plugin interface
 """
 
-from ctcdetect.core import (
-    run_detection,
-    load_model,
-    check_geneformer_available,
-    CTCDetectionPipeline,
-    detect_format,
-    validate_input,
-    load_data,
-    run_qc,
-    normalize,
-    map_genes_to_ensembl,
-)
-from ctcdetect.evaluation import (
-    compute_metrics,
-    generate_umap,
-    plot_roc_pr,
-    plot_score_distribution,
-    generate_report,
-    generate_html_report,
-    generate_eval_report,
-    generate_eval_html_report,
-)
 from ctcdetect.config import (
+    CHECKPOINT_DIR,
+    DEFAULT_MODEL,
+    FINETUNED_DIR,
+    GENE_MAPPING,
+    GENE_MEDIAN,
+    GENEFORMER_DIR,
+    MODEL_CACHE_DIR,
     # Registry
     MODEL_REGISTRY,
-    VERSION_MAP,
-    DEFAULT_MODEL,
-    get_version,
-    get_model_cache_path,
     # Paths
     PROJECT_ROOT,
-    MODEL_CACHE_DIR,
-    GENEFORMER_DIR,
-    CHECKPOINT_DIR,
-    FINETUNED_DIR,
     TOKEN_DICT,
-    GENE_MEDIAN,
-    GENE_MAPPING,
-    # Config loading
-    load_config,
-    get_config,
-    get_config_value,
+    VERSION_MAP,
+    GeneMappingConfig,
+    HighlyVariableGenesConfig,
+    InferenceConfig,
+    NormalizeConfig,
+    OutputConfig,
     # Schemas
     PreprocessConfig,
     QCConfig,
-    NormalizeConfig,
-    HighlyVariableGenesConfig,
-    GeneMappingConfig,
     TokenizeConfig,
     UMAPConfig,
-    InferenceConfig,
-    OutputConfig,
+    get_config,
+    get_config_value,
+    get_model_cache_path,
     # System info
     get_system_info,
+    get_version,
+    # Config loading
+    load_config,
+)
+from ctcdetect.core import (
+    CTCDetectionPipeline,
+    check_geneformer_available,
+    detect_format,
+    load_data,
+    load_model,
+    map_genes_to_ensembl,
+    normalize,
+    run_detection,
+    run_qc,
+    validate_input,
+)
+from ctcdetect.data import (
+    combine_training_datasets,
+    merge_per_cell_files,
+    prepare_external_dataset,
+)
+from ctcdetect.evaluation import (
+    compute_metrics,
+    generate_eval_html_report,
+    generate_eval_report,
+    generate_html_report,
+    generate_report,
+    generate_umap,
+    plot_roc_pr,
+    plot_score_distribution,
+)
+from ctcdetect.exceptions import (
+    ConfigurationError,
+    CTCDetectError,
+    DependencyError,
+    GeneMappingError,
+    InferenceError,
+    InputError,
+    InputValidationError,
+    OutputError,
+    TokenizationError,
+    ValidationError,
+    handle_error,
+)
+from ctcdetect.extensions import (
+    GeneformerBackend,
+    ModelBackend,
+    get_backend,
+    list_backends,
+    register_backend,
 )
 from ctcdetect.training import (
     create_lora_config,
     load_base_model,
     train_model,
-)
-from ctcdetect.data import (
-    merge_per_cell_files,
-    prepare_external_dataset,
-    combine_training_datasets,
-)
-from ctcdetect.exceptions import (
-    CTCDetectError,
-    ConfigurationError,
-    DependencyError,
-    GeneMappingError,
-    InferenceError,
-    InputError,
-    ValidationError,
-    InputValidationError,
-    OutputError,
-    TokenizationError,
-    handle_error,
-)
-from ctcdetect.extensions import (
-    ModelBackend,
-    GeneformerBackend,
-    register_backend,
-    get_backend,
-    list_backends,
 )
 
 __version__ = "0.1.0"

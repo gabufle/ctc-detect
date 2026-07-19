@@ -4,24 +4,23 @@ Fine-tunes Geneformer with PEFT/LoRA for CTC classification.
 """
 
 from pathlib import Path
-from typing import Optional, Tuple
 
 import torch
+from datasets import Dataset
+from peft import LoraConfig, TaskType, get_peft_model
 from transformers import (
     AutoConfig,
     AutoModelForSequenceClassification,
     Trainer,
     TrainingArguments,
 )
-from peft import LoraConfig, TaskType, get_peft_model
-from datasets import Dataset
 
 
 def create_lora_config(
     r: int = 8,
     lora_alpha: int = 32,
     lora_dropout: float = 0.1,
-    target_modules: Optional[list] = None,
+    target_modules: list | None = None,
 ) -> LoraConfig:
     """Create LoRA configuration for Geneformer fine-tuning.
 
@@ -51,8 +50,8 @@ def create_lora_config(
 def load_base_model(
     model_path: Path,
     num_labels: int = 2,
-    device: Optional[torch.device] = None,
-) -> Tuple:
+    device: torch.device | None = None,
+) -> tuple:
     """Load base Geneformer model for fine-tuning.
 
     Args:
@@ -171,13 +170,13 @@ def train_model(
 
     # Custom metrics function
     def compute_metrics(eval_pred):
+        import numpy as np
         from sklearn.metrics import (
-            roc_auc_score,
+            accuracy_score,
             average_precision_score,
             f1_score,
-            accuracy_score,
+            roc_auc_score,
         )
-        import numpy as np
 
         logits, labels = eval_pred
         probs = torch.softmax(torch.tensor(logits), dim=-1).numpy()[:, 1]

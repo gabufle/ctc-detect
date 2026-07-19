@@ -4,14 +4,12 @@ Handles both PEFT/LoRA adapters and full model checkpoints.
 """
 
 import json
-import sys
 from pathlib import Path
 
 import torch
 from rich.console import Console
 
 from ctcdetect.config.paths import CHECKPOINT_DIR, FINETUNED_DIR
-from ctcdetect.exceptions import InferenceError, ModelError
 
 console = Console()
 
@@ -50,7 +48,7 @@ def _validate_adapter_config(model_dir: Path) -> dict:
             cfg = json.load(f)
     except (json.JSONDecodeError, OSError) as e:
         console.print(f"[red]Error:[/red] Could not read adapter config {adapter_config}: {e}")
-        raise SystemExit(1)
+        raise SystemExit(1) from e
 
     peft_type = str(cfg.get("peft_type", "")).upper()
     if peft_type != "LORA":
@@ -138,8 +136,8 @@ def _load_model(model_dir: Path):
     Handles both PEFT/LoRA adapters and full model checkpoints.
     Returns (model, device).
     """
-    from transformers import AutoConfig, AutoModelForSequenceClassification
     from peft import PeftConfig, PeftModel
+    from transformers import AutoConfig, AutoModelForSequenceClassification
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     console.print(f"  Device: {device}")
@@ -220,7 +218,7 @@ def check_geneformer_available() -> bool:
     Returns:
         True if Geneformer is available, False otherwise.
     """
-    from ctcdetect.config.paths import GENEFORMER_DIR, TOKEN_DICT, GENE_MEDIAN, GENE_MAPPING
+    from ctcdetect.config.paths import GENE_MAPPING, GENE_MEDIAN, GENEFORMER_DIR, TOKEN_DICT
 
     if not GENEFORMER_DIR.exists():
         return False

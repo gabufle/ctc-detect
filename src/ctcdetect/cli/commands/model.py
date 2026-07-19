@@ -1,15 +1,12 @@
 """Model management commands for CTC-Detect CLI."""
 
+
 import typer
-from pathlib import Path
-from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
-from ctcdetect.cli.utils import print_banner, console
-from ctcdetect.config import get_model_cache_path, MODEL_REGISTRY, get_version
-from ctcdetect.config.system import get_system_info
-
+from ctcdetect.cli.utils import console, print_banner
+from ctcdetect.config import MODEL_REGISTRY, get_model_cache_path, get_version
 
 model_app = typer.Typer(
     help="Manage Geneformer models — download, list, and inspect available models.",
@@ -41,7 +38,7 @@ def model_download(
         repo_id = get_version(version)
     except ValueError as e:
         console.print(f"[red]Error:[/red] {e}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e
 
     cache_path = get_model_cache_path(version)
 
@@ -64,7 +61,7 @@ def model_download(
     except ImportError:
         console.print("[red]Error:[/red] huggingface_hub is not installed.")
         console.print("Install it with: pip install huggingface_hub")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     # Check available disk space (require at least 2 GB free)
     try:
@@ -96,14 +93,14 @@ def model_download(
     except ConnectionError as e:
         console.print(f"\n[red]Error:[/red] Network failure: {e}")
         console.print("Check your network connection and try again.")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e
     except OSError as e:
         if "No space left on device" in str(e):
             console.print("\n[red]Error:[/red] Disk full during download.")
             console.print("Free up space and try again.")
         else:
             console.print(f"\n[red]Error:[/red] OS error: {e}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e
     except Exception as e:
         error_msg = str(e).lower()
         if "401" in error_msg or "unauthorized" in error_msg or "forbidden" in error_msg:
@@ -119,7 +116,7 @@ def model_download(
         else:
             console.print(f"\n[red]Error:[/red] Download failed: {e}")
             console.print("Check your network connection and try again.")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e
 
     console.print(f"\n[green]✓[/green] Model downloaded to {cache_path}")
 

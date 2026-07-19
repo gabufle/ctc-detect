@@ -1,15 +1,15 @@
 """Configuration loading for CTC-Detect."""
 
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 import yaml
 
-from ctcdetect.exceptions import ConfigurationError
 from ctcdetect.config.schemas import PreprocessConfig
+from ctcdetect.exceptions import ConfigurationError
 
 
-def load_config(config_path: Optional[Union[str, Path]] = None) -> PreprocessConfig:
+def load_config(config_path: str | Path | None = None) -> PreprocessConfig:
     """Load configuration from YAML file.
 
     Args:
@@ -44,7 +44,7 @@ def load_config(config_path: Optional[Union[str, Path]] = None) -> PreprocessCon
             f"Failed to parse YAML config: {config_path}",
             hint="Check YAML syntax. Common issues: tabs instead of spaces, missing quotes.",
             details={"config_path": str(config_path), "parse_error": str(e)},
-        )
+        ) from e
 
     if not isinstance(data, dict):
         raise ConfigurationError(
@@ -59,14 +59,14 @@ def load_config(config_path: Optional[Union[str, Path]] = None) -> PreprocessCon
             f"Config validation failed for {config_path}",
             hint="Check that all required fields are present and have valid values.",
             details={"config_path": str(config_path), "validation_error": str(e)},
-        )
+        ) from e
 
 
 # Global config instance (loaded on first access)
-_config: Optional[PreprocessConfig] = None
+_config: PreprocessConfig | None = None
 
 
-def get_config(config_path: Optional[Union[str, Path]] = None, reload: bool = False) -> PreprocessConfig:
+def get_config(config_path: str | Path | None = None, reload: bool = False) -> PreprocessConfig:
     """Get the global configuration instance.
 
     Args:

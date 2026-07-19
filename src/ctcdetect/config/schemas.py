@@ -3,8 +3,7 @@
 Provides validated configuration models with IDE autocomplete and runtime validation.
 """
 
-from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -18,7 +17,7 @@ class QCConfig(BaseModel):
     min_counts: int = Field(ge=0, le=100000, default=500)
     max_counts: int = Field(ge=0, le=500000, default=50000)
     min_cells: int = Field(ge=1, le=1000, default=10)
-    max_pct_ribo: Optional[float] = Field(default=None, ge=0, le=100)
+    max_pct_ribo: float | None = Field(default=None, ge=0, le=100)
 
 
 class NormalizeConfig(BaseModel):
@@ -83,7 +82,7 @@ class OutputConfig(BaseModel):
     save_preprocessed: bool = False
     save_tokenized: bool = False
     save_logits: bool = False
-    compression: Optional[Literal["gzip", "bz2", "xz"]] = None
+    compression: Literal["gzip", "bz2", "xz"] | None = None
 
 
 class PreprocessConfig(BaseModel):

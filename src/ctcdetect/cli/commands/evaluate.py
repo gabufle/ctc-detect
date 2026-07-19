@@ -1,15 +1,14 @@
 """Evaluate command for CTC-Detect CLI."""
 
-import typer
-from pathlib import Path
-from typing import Optional
+
 import numpy as np
 import pandas as pd
+import typer
 
-from ctcdetect.cli.utils import validate_input_path, validate_output_path, print_banner, console
+from ctcdetect.cli.utils import console, print_banner, validate_input_path, validate_output_path
 from ctcdetect.evaluation.metrics import compute_metrics
-from ctcdetect.evaluation.reports import generate_report, generate_html_report
 from ctcdetect.evaluation.plots import plot_roc_pr, plot_score_distribution
+from ctcdetect.evaluation.reports import generate_html_report, generate_report
 
 
 @typer.Typer(
@@ -30,7 +29,7 @@ def evaluate(
         ),
         rich_help_panel="Input/Output",
     ),
-    ground_truth: Optional[str] = typer.Option(
+    ground_truth: str | None = typer.Option(
         None,
         "--ground-truth", "-g",
         help=(
@@ -40,7 +39,7 @@ def evaluate(
         ),
         rich_help_panel="Input/Output",
     ),
-    output: Optional[str] = typer.Option(
+    output: str | None = typer.Option(
         None,
         "--output", "-o",
         help=(

@@ -4,8 +4,8 @@ All custom exceptions inherit from CTCDetectError, which provides
 structured error information and suggested remediation.
 """
 
-from typing import Optional, Any
 from pathlib import Path
+from typing import Any
 
 
 class CTCDetectError(Exception):
@@ -20,8 +20,8 @@ class CTCDetectError(Exception):
     def __init__(
         self,
         message: str,
-        hint: Optional[str] = None,
-        details: Optional[dict] = None,
+        hint: str | None = None,
+        details: dict | None = None,
     ):
         super().__init__(message)
         self.message = message
@@ -58,9 +58,9 @@ class ModelError(CTCDetectError):
     def __init__(
         self,
         message: str,
-        model_path: Optional[Path] = None,
-        hint: Optional[str] = None,
-        details: Optional[dict] = None,
+        model_path: Path | None = None,
+        hint: str | None = None,
+        details: dict | None = None,
     ):
         super().__init__(message, hint, details)
         self.model_path = model_path
@@ -74,9 +74,9 @@ class InputError(CTCDetectError):
     def __init__(
         self,
         message: str,
-        input_path: Optional[Path] = None,
-        hint: Optional[str] = None,
-        details: Optional[dict] = None,
+        input_path: Path | None = None,
+        hint: str | None = None,
+        details: dict | None = None,
     ):
         super().__init__(message, hint, details)
         self.input_path = input_path
@@ -90,11 +90,11 @@ class ValidationError(CTCDetectError):
     def __init__(
         self,
         message: str,
-        failed_check: Optional[str] = None,
-        expected: Optional[Any] = None,
-        actual: Optional[Any] = None,
-        hint: Optional[str] = None,
-        details: Optional[dict] = None,
+        failed_check: str | None = None,
+        expected: Any | None = None,
+        actual: Any | None = None,
+        hint: str | None = None,
+        details: dict | None = None,
     ):
         super().__init__(message, hint, details)
         self.failed_check = failed_check
@@ -118,9 +118,9 @@ class GeneMappingError(CTCDetectError):
     def __init__(
         self,
         message: str,
-        mapped_count: Optional[int] = None,
-        total_count: Optional[int] = None,
-        hint: Optional[str] = None,
+        mapped_count: int | None = None,
+        total_count: int | None = None,
+        hint: str | None = None,
     ):
         super().__init__(message, hint)
         self.mapped_count = mapped_count
@@ -151,9 +151,9 @@ class OutputError(CTCDetectError):
     def __init__(
         self,
         message: str,
-        output_path: Optional[Path] = None,
-        hint: Optional[str] = None,
-        details: Optional[dict] = None,
+        output_path: Path | None = None,
+        hint: str | None = None,
+        details: dict | None = None,
     ):
         super().__init__(message, hint, details)
         self.output_path = output_path
@@ -167,9 +167,9 @@ class DependencyError(CTCDetectError):
     def __init__(
         self,
         message: str,
-        package: Optional[str] = None,
-        required_version: Optional[str] = None,
-        hint: Optional[str] = None,
+        package: str | None = None,
+        required_version: str | None = None,
+        hint: str | None = None,
     ):
         super().__init__(message, hint)
         self.package = package

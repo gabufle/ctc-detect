@@ -4,14 +4,14 @@ import typer
 from rich.console import Console
 
 from ctcdetect.cli.commands import (
-    run_app,
-    validate_app,
     batch_app,
-    multi_app,
     evaluate_app,
-    onboard_app,
     info_app,
     model_app,
+    multi_app,
+    onboard_app,
+    run_app,
+    validate_app,
 )
 
 console = Console()

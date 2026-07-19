@@ -6,7 +6,7 @@ without modifying core pipeline code.
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Type
+from typing import Any
 
 import numpy as np
 import torch
@@ -26,12 +26,12 @@ class ModelBackend(ABC):
 
     @property
     @abstractmethod
-    def supported_tasks(self) -> List[str]:
+    def supported_tasks(self) -> list[str]:
         """List of supported tasks (e.g., ['classification', 'embedding'])."""
         pass
 
     @abstractmethod
-    def load(self, model_dir: Path, device: Optional[torch.device] = None) -> Any:
+    def load(self, model_dir: Path, device: torch.device | None = None) -> Any:
         """Load model from directory.
 
         Args:
@@ -49,7 +49,7 @@ class ModelBackend(ABC):
         model: Any,
         input_ids: torch.Tensor,
         attention_mask: torch.Tensor,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Run inference on tokenized input.
 
         Args:
@@ -77,7 +77,7 @@ class ModelBackend(ABC):
         pass
 
     @abstractmethod
-    def get_config(self, model_dir: Path) -> Dict[str, Any]:
+    def get_config(self, model_dir: Path) -> dict[str, Any]:
         """Get model configuration.
 
         Args:
@@ -97,12 +97,12 @@ class GeneformerBackend(ModelBackend):
         return "geneformer"
 
     @property
-    def supported_tasks(self) -> List[str]:
+    def supported_tasks(self) -> list[str]:
         return ["classification"]
 
-    def load(self, model_dir: Path, device: Optional[torch.device] = None) -> Any:
-        from transformers import AutoConfig, AutoModelForSequenceClassification
+    def load(self, model_dir: Path, device: torch.device | None = None) -> Any:
         from peft import PeftConfig, PeftModel
+        from transformers import AutoConfig, AutoModelForSequenceClassification
 
         if device is None:
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -150,7 +150,7 @@ class GeneformerBackend(ModelBackend):
         model: Any,
         input_ids: torch.Tensor,
         attention_mask: torch.Tensor,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         with torch.no_grad():
             outputs = model(input_ids=input_ids, attention_mask=attention_mask)
             logits = outputs.logits
@@ -174,7 +174,7 @@ class GeneformerBackend(ModelBackend):
             or (model_dir / "model.safetensors").exists()
         )
 
-    def get_config(self, model_dir: Path) -> Dict[str, Any]:
+    def get_config(self, model_dir: Path) -> dict[str, Any]:
         adapter_config = model_dir / "adapter_config.json"
         if adapter_config.exists():
             import json
@@ -195,10 +195,10 @@ class GeneformerBackend(ModelBackend):
 
 
 # Registry for backends
-_backends: Dict[str, Type[ModelBackend]] = {}
+_backends: dict[str, type[ModelBackend]] = {}
 
 
-def register_backend(backend_class: Type[ModelBackend]) -> None:
+def register_backend(backend_class: type[ModelBackend]) -> None:
     """Register a new model backend.
 
     Args:
@@ -225,7 +225,7 @@ def get_backend(name: str) -> ModelBackend:
     return _backends[name]()
 
 
-def list_backends() -> List[str]:
+def list_backends() -> list[str]:
     """List all registered backend names."""
     return list(_backends.keys())
 

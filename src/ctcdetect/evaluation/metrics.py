@@ -3,7 +3,6 @@
 Provides metrics computation for evaluating CTC detection predictions against ground truth.
 """
 
-from pathlib import Path
 
 import numpy as np
 from sklearn.metrics import (

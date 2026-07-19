@@ -11,10 +11,10 @@ from ctcdetect.evaluation.plots import (
     plot_score_distribution,
 )
 from ctcdetect.evaluation.reports import (
-    generate_report,
-    generate_html_report,
-    generate_eval_report,
     generate_eval_html_report,
+    generate_eval_report,
+    generate_html_report,
+    generate_report,
 )
 
 __all__ = [

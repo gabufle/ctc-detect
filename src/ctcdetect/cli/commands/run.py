@@ -1,10 +1,9 @@
 """Run command for CTC-Detect CLI."""
 
-import typer
-from pathlib import Path
-from typing import Optional, List
 
-from ctcdetect.cli.utils import validate_input_path, validate_output_path, print_banner, console
+import typer
+
+from ctcdetect.cli.utils import console, print_banner, validate_input_path, validate_output_path
 from ctcdetect.core.detect import run_detection
 
 
@@ -37,7 +36,7 @@ def run(
         ),
         rich_help_panel="Input/Output",
     ),
-    cancer_type: Optional[str] = typer.Option(
+    cancer_type: str | None = typer.Option(
         None,
         "--cancer-type", "-c",
         help=(
@@ -62,7 +61,7 @@ def run(
         help="Skip UMAP visualization for faster runs.",
         rich_help_panel="Model Options",
     ),
-    files: Optional[List[str]] = typer.Option(
+    files: list[str] | None = typer.Option(
         None,
         "--files", "-f",
         help=(
@@ -145,7 +144,7 @@ def batch(
     fail_count = 0
     failed_samples = []
 
-    from rich.progress import Progress, TextColumn, BarColumn
+    from rich.progress import BarColumn, Progress, TextColumn
 
     with Progress(
         TextColumn("[progress.description]{task.description}"),

@@ -4,15 +4,15 @@ Provides the main detection pipeline and preprocessing utilities.
 """
 
 from ctcdetect.core.detect import run_detection
-from ctcdetect.core.model import load_model, check_geneformer_available
+from ctcdetect.core.model import check_geneformer_available, load_model
 from ctcdetect.core.pipeline import CTCDetectionPipeline
 from ctcdetect.core.preprocess import (
     detect_format,
-    validate_input,
     load_data,
-    run_qc,
-    normalize,
     map_genes_to_ensembl,
+    normalize,
+    run_qc,
+    validate_input,
 )
 
 __all__ = [

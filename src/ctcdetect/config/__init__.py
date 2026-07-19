@@ -12,8 +12,8 @@ from ctcdetect.config.loader import get_config, get_config_value, load_config
 from ctcdetect.config.paths import (
     CHECKPOINT_DIR,
     FINETUNED_DIR,
-    GENE_MEDIAN,
     GENE_MAPPING,
+    GENE_MEDIAN,
     GENEFORMER_DIR,
     MODEL_CACHE_DIR,
     PROJECT_ROOT,
@@ -23,8 +23,8 @@ from ctcdetect.config.registry import (
     DEFAULT_MODEL,
     MODEL_REGISTRY,
     VERSION_MAP,
-    get_version,
     get_model_cache_path,
+    get_version,
 )
 from ctcdetect.config.schemas import (
     GeneMappingConfig,
@@ -45,6 +45,7 @@ __all__ = [
     "VERSION_MAP",
     "DEFAULT_MODEL",
     "get_version",
+    "get_model_cache_path",
     # Paths
     "PROJECT_ROOT",
     "MODEL_CACHE_DIR",

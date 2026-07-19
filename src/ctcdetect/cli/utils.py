@@ -31,7 +31,7 @@ def validate_output_path(path: str, description: str = "Output path") -> Path:
             console.print(
                 f"[red]Error:[/red] Cannot create output directory '{parent}': {e}"
             )
-            raise SystemExit(1)
+            raise SystemExit(1) from e
     return p
 
 

@@ -1,13 +1,11 @@
 """Batch command for CTC-Detect CLI."""
 
+
 import typer
-from pathlib import Path
-from typing import Optional, List
-from rich.console import Console
 from rich.progress import Progress, TextColumn
 from rich.table import Table
 
-from ctcdetect.cli.utils import validate_input_path, validate_output_path, print_banner, console
+from ctcdetect.cli.utils import console, print_banner, validate_input_path, validate_output_path
 from ctcdetect.core.detect import run_detection
 
 
@@ -78,7 +76,7 @@ def batch(
 
     success_count = 0
     fail_count = 0
-    failed_samples: List[str] = []
+    failed_samples: list[str] = []
 
     with Progress(
         TextColumn("[progress.description]{task.description}"),
