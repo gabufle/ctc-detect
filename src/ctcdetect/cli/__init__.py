@@ -5,8 +5,8 @@ from ctcdetect.cli.utils import console, print_banner, validate_input_path, vali
 
 __all__ = [
     "app",
+    "console",
+    "print_banner",
     "validate_input_path",
     "validate_output_path",
-    "print_banner",
-    "console",
 ]

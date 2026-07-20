@@ -3,6 +3,10 @@
 Provides the main detection pipeline and preprocessing utilities.
 """
 
+# Import submodules directly to avoid circular imports
+from ctcdetect.core import detect, model, pipeline, preprocess
+
+# Re-export public API
 from ctcdetect.core.detect import run_detection
 from ctcdetect.core.model import check_geneformer_available, load_model
 from ctcdetect.core.pipeline import CTCDetectionPipeline

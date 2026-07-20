@@ -231,7 +231,7 @@ def run_detection(
         threshold: Probability threshold for CTC calls.
         skip_umap: Skip UMAP visualization for faster runs.
     """
-    from ctcdetect.utils import print_banner
+    from ctcdetect.cli.utils import print_banner
 
     print_banner()
     console.print(f"[bold]Input:[/bold]  {input_path}")

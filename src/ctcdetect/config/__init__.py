@@ -39,6 +39,8 @@ from ctcdetect.config.schemas import (
 )
 from ctcdetect.config.system import get_system_info
 
+__version__ = "0.1.0"
+
 __all__ = [
     # Registry
     "MODEL_REGISTRY",
@@ -71,4 +73,5 @@ __all__ = [
     "OutputConfig",
     # System info
     "get_system_info",
+    "__version__",
 ]

@@ -10,7 +10,7 @@ import json
 
 import pytest
 
-from ctcdetect.detect import _validate_adapter_config
+from ctcdetect.core.model import _validate_adapter_config
 
 
 def _write_adapter_config(model_dir, payload):

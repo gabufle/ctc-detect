@@ -11,11 +11,9 @@ from ctcdetect.evaluation.plots import plot_roc_pr, plot_score_distribution
 from ctcdetect.evaluation.reports import generate_html_report, generate_report
 
 
-@typer.Typer(
+evaluate_app = typer.Typer(
     help="Evaluate CTC detection results.",
 )
-def evaluate_app():
-    pass
 
 
 @evaluate_app.command()

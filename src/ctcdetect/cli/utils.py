@@ -45,6 +45,7 @@ def print_banner() -> None:
 
 
 __all__ = [
+    "console",
     "validate_input_path",
     "validate_output_path",
     "print_banner",

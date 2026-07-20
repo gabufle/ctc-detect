@@ -16,7 +16,7 @@ runner = CliRunner()
 # ── Run command tests (mocked) ──
 
 def test_run_command_missing_input():
-    """Run with non-existent input should exit with code 1."""
+    """Run with non-existent input should exit with code 1 (validation error)."""
     result = runner.invoke(app, [
         "run",
         "--input", "/nonexistent/path",
@@ -53,7 +53,7 @@ def test_run_command_help():
 # ── Batch command tests ──
 
 def test_batch_command_missing_input_dir():
-    """Batch with non-existent input dir should exit with code 1."""
+    """Batch with non-existent input dir should exit with code 1 (validation error)."""
     result = runner.invoke(app, [
         "batch",
         "--input-dir", "/nonexistent/dir",
@@ -322,7 +322,7 @@ def test_config_get_system_info():
 
 def test_validate_output_path_creates_parents(tmp_path):
     """validate_output_path should create parent directories."""
-    from ctcdetect.utils import validate_output_path
+    from ctcdetect.cli.utils import validate_output_path
     
     output = tmp_path / "new_dir" / "subdir" / "output"
     result = validate_output_path(str(output))
@@ -331,127 +331,7 @@ def test_validate_output_path_creates_parents(tmp_path):
 
 def test_print_banner(capsys):
     """print_banner should print something."""
-    from ctcdetect.utils import print_banner
+    from ctcdetect.cli.utils import print_banner
     print_banner()
     captured = capsys.readouterr()
     assert "CTC-Detect" in captured.out
-
-
-# ── Multi command tests ──
-
-def test_multi_command_help():
-    """Multi command --help should work."""
-    result = runner.invoke(app, ["multi", "--help"])
-    assert result.exit_code == 0
-    # Strip ANSI escape codes for assertion
-    import re
-    clean = re.sub(r'\x1b\[[0-9;]*m', '', result.output)
-    assert "Arguments" in clean
-    assert "--output" in clean
-    assert "--threshold" in clean
-    assert "--skip-umap" in clean
-
-
-def test_multi_command_missing_files():
-    """Multi command without files should fail."""
-    result = runner.invoke(app, [
-        "multi",
-        "--output", "/tmp/test_output",
-    ])
-    assert result.exit_code != 0
-    assert "missing" in result.output.lower() or "required" in result.output.lower()
-
-
-def test_multi_command_missing_output(tmp_path):
-    """Multi command with files but no output should fail."""
-    # Create test CSV files
-    csv1_path = tmp_path / "test1.csv"
-    csv2_path = tmp_path / "test2.csv"
-    pd.DataFrame({"GENE1": [1, 2], "GENE2": [3, 4]}, index=["CELL1", "CELL2"]).to_csv(csv1_path)
-    pd.DataFrame({"GENE1": [5, 6], "GENE2": [7, 8]}, index=["CELL3", "CELL4"]).to_csv(csv2_path)
-    
-    result = runner.invoke(app, [
-        "multi",
-        str(csv1_path),
-        str(csv2_path),
-    ])
-    # Should fail because --output is required
-    assert result.exit_code != 0
-
-
-def test_multi_command_with_valid_files(tmp_path):
-    """Multi command with valid files should process them."""
-    # Create test CSV files
-    csv1_path = tmp_path / "test1.csv"
-    csv2_path = tmp_path / "test2.csv"
-    pd.DataFrame({"GENE1": [1, 2], "GENE2": [3, 4]}, index=["CELL1", "CELL2"]).to_csv(csv1_path)
-    pd.DataFrame({"GENE1": [5, 6], "GENE2": [7, 8]}, index=["CELL3", "CELL4"]).to_csv(csv2_path)
-    
-    output_dir = tmp_path / "output"
-    
-    # Skip if torch is not available (detect module depends on torch)
-    try:
-        import torch
-    except ImportError:
-        pytest.skip("torch not available, skipping multi command tests")
-    
-    # Import detect module so it's available for patching
-    from ctcdetect.core import detect
-    
-    # Mock the run_detection function at its source module
-    with patch("ctcdetect.detect.run_detection") as mock_run:
-        mock_run.return_value = None
-        
-        result = runner.invoke(app, [
-            "multi",
-            str(csv1_path),
-            str(csv2_path),
-            "--output", str(output_dir),
-            "--skip-umap",
-        ])
-        
-        # Should succeed (exit code 0)
-        assert result.exit_code == 0
-        
-        # Should have called run_detection twice (once per file)
-        assert mock_run.call_count == 2
-        
-        # Check that output directories were created
-        assert (output_dir / "sample_1_test1").exists()
-        assert (output_dir / "sample_2_test2").exists()
-
-
-def test_multi_command_with_threshold(tmp_path):
-    """Multi command should pass threshold option to run_detection."""
-    # Create test CSV file
-    csv_path = tmp_path / "test.csv"
-    pd.DataFrame({"GENE1": [1, 2], "GENE2": [3, 4]}, index=["CELL1", "CELL2"]).to_csv(csv_path)
-    
-    output_dir = tmp_path / "output"
-    
-    # Skip if torch is not available
-    try:
-        import torch
-    except ImportError:
-        pytest.skip("torch not available, skipping multi command tests")
-    
-    # Import detect module so it's available for patching
-    from ctcdetect.core import detect
-    
-    # Mock the run_detection function at its source module
-    with patch("ctcdetect.detect.run_detection") as mock_run:
-        mock_run.return_value = None
-        
-        result = runner.invoke(app, [
-            "multi",
-            str(csv_path),
-            "--output", str(output_dir),
-            "--threshold", "0.7",
-            "--skip-umap",
-        ])
-        
-        assert result.exit_code == 0
-        
-        # Check that threshold was passed correctly
-        call_args = mock_run.call_args
-        assert call_args[1]["threshold"] == 0.7

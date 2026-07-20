@@ -14,15 +14,15 @@ import scanpy as sc
 from rich.console import Console
 
 from ctcdetect.config import get_config
-from ctcdetect.core import (
-    detect_format,
+from ctcdetect.core.detect import detect_format
+from ctcdetect.core.model import check_geneformer_available, load_model
+from ctcdetect.core.preprocess import (
     load_data,
     map_genes_to_ensembl,
     normalize,
     run_qc,
     validate_input,
 )
-from ctcdetect.core.model import check_geneformer_available, load_model
 from ctcdetect.evaluation import (
     generate_html_report,
     generate_report,

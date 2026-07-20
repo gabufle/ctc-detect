@@ -7,11 +7,9 @@ from ctcdetect.cli.utils import console, print_banner, validate_input_path, vali
 from ctcdetect.core.detect import run_detection
 
 
-@typer.Typer(
+run_app = typer.Typer(
     help="Run CTC detection on a single sample.",
 )
-def run_app():
-    pass
 
 
 @run_app.command()

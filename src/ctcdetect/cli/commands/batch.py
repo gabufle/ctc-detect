@@ -9,7 +9,7 @@ from ctcdetect.cli.utils import console, print_banner, validate_input_path, vali
 from ctcdetect.core.detect import run_detection
 
 
-@typer.Typer(
+batch_app = typer.Typer(
     name="batch",
     help=(
         "Run CTC detection on multiple samples at once.\n\n"
@@ -18,8 +18,6 @@ from ctcdetect.core.detect import run_detection
     ),
     rich_markup_mode="rich",
 )
-def batch_app():
-    pass
 
 
 @batch_app.command()

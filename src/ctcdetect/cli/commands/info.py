@@ -8,11 +8,9 @@ from ctcdetect.cli.utils import console, print_banner
 from ctcdetect.config import get_system_info
 
 
-@typer.Typer(
+info_app = typer.Typer(
     help="Show CTC-Detect version and system information.",
 )
-def info_app():
-    pass
 
 
 @info_app.command()

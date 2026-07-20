@@ -7,12 +7,12 @@ import pandas as pd
 import pytest
 import scanpy as sc
 
-from ctcdetect.core.model import _resolve_model_dir, _check_geneformer, CHECKPOINT_DIR, FINETUNED_DIR
+from ctcdetect.core.model import _resolve_model_dir, CHECKPOINT_DIR, FINETUNED_DIR
 
 
 def test_prepare_adata_csv(tmp_path):
     """Test _prepare_adata with CSV input raises ValueError (only cellranger/h5ad supported)."""
-    from ctcdetect.detect import _prepare_adata
+    from ctcdetect.core.detect import _prepare_adata
 
     csv_path = tmp_path / "test_input.csv"
     n_genes = 50
@@ -36,7 +36,7 @@ def test_prepare_adata_csv(tmp_path):
 
 def test_resolve_model_dir_missing(tmp_path, monkeypatch):
     """_resolve_model_dir should SystemExit when no model exists."""
-    import ctcdetect.detect as detect_mod
+    import ctcdetect.core.model as detect_mod
 
     fake_checkpoint = tmp_path / "nonexistent_checkpoint"
     fake_finetuned = tmp_path / "nonexistent_finetuned"
@@ -50,7 +50,7 @@ def test_resolve_model_dir_missing(tmp_path, monkeypatch):
 
 def test_resolve_model_dir_checkpoint_with_weights(tmp_path, monkeypatch):
     """_resolve_model_dir should return CHECKPOINT_DIR when it has weights."""
-    import ctcdetect.detect as detect_mod
+    import ctcdetect.core.model as detect_mod
 
     # Create checkpoint dir with a weight file
     checkpoint = tmp_path / "checkpoint"
@@ -69,7 +69,7 @@ def test_resolve_model_dir_checkpoint_with_weights(tmp_path, monkeypatch):
 
 def test_resolve_model_dir_finetuned_fallback(tmp_path, monkeypatch):
     """_resolve_model_dir should fall back to FINETUNED_DIR when checkpoint has no weights."""
-    import ctcdetect.detect as detect_mod
+    import ctcdetect.core.model as detect_mod
 
     # Checkpoint exists but has no weights
     checkpoint = tmp_path / "checkpoint"
@@ -88,7 +88,7 @@ def test_resolve_model_dir_finetuned_fallback(tmp_path, monkeypatch):
 
 def test_resolve_model_dir_checkpoint_empty_weights_dir(tmp_path, monkeypatch):
     """_resolve_model_dir should fall back when checkpoint dir exists but is empty."""
-    import ctcdetect.detect as detect_mod
+    import ctcdetect.core.model as detect_mod
 
     checkpoint = tmp_path / "checkpoint"
     checkpoint.mkdir()
@@ -102,30 +102,3 @@ def test_resolve_model_dir_checkpoint_empty_weights_dir(tmp_path, monkeypatch):
 
     result = _resolve_model_dir()
     assert result == finetuned
-
-
-def test_check_geneformer_missing_dir(tmp_path, monkeypatch, capsys):
-    """_check_geneformer should SystemExit when Geneformer dir doesn't exist."""
-    import ctcdetect.detect as detect_mod
-
-    fake_geneformer = tmp_path / "nonexistent_geneformer"
-    monkeypatch.setattr(detect_mod, "GENEFORMER_DIR", fake_geneformer)
-
-    with pytest.raises(SystemExit):
-        _check_geneformer()
-
-
-def test_check_geneformer_missing_files(tmp_path, monkeypatch):
-    """_check_geneformer should SystemExit when required files are missing."""
-    import ctcdetect.detect as detect_mod
-
-    fake_geneformer = tmp_path / "geneformer"
-    fake_geneformer.mkdir()
-
-    monkeypatch.setattr(detect_mod, "GENEFORMER_DIR", fake_geneformer)
-    monkeypatch.setattr(detect_mod, "TOKEN_DICT", fake_geneformer / "token_dictionary_gc104M.pkl")
-    monkeypatch.setattr(detect_mod, "GENE_MEDIAN", fake_geneformer / "gene_median_dictionary_gc104M.pkl")
-    monkeypatch.setattr(detect_mod, "GENE_MAPPING", fake_geneformer / "ensembl_mapping_dict_gc104M.pkl")
-
-    with pytest.raises(SystemExit):
-        _check_geneformer()

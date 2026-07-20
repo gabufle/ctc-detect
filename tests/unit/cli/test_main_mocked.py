@@ -26,7 +26,7 @@ def test_run_command_with_mock_model(tmp_path):
     
     output_path = tmp_path / "output"
     
-    with patch("ctcdetect.detect.run_detection") as mock_run:
+    with patch("ctcdetect.cli.app.run_detection") as mock_run:
         result = runner.invoke(app, [
             "run",
             "--input", str(csv_path),
@@ -51,7 +51,7 @@ def test_run_command_with_threshold_and_skip_umap(tmp_path):
     
     output_path = tmp_path / "output"
     
-    with patch("ctcdetect.detect.run_detection") as mock_run:
+    with patch("ctcdetect.cli.app.run_detection") as mock_run:
         result = runner.invoke(app, [
             "run",
             "--input", str(csv_path),
@@ -85,7 +85,7 @@ def test_batch_command_with_mock(tmp_path):
     
     output_dir = tmp_path / "output"
     
-    with patch("ctcdetect.detect.run_detection") as mock_run:
+    with patch("ctcdetect.cli.app.run_detection") as mock_run:
         result = runner.invoke(app, [
             "batch",
             "--input-dir", str(input_dir),
@@ -133,7 +133,7 @@ def test_batch_command_with_mock_errors(tmp_path):
     
     output_dir = tmp_path / "output"
     
-    with patch("ctcdetect.detect.run_detection") as mock_run:
+    with patch("ctcdetect.cli.app.run_detection") as mock_run:
         mock_run.side_effect = [None, RuntimeError("Model not found")]
         
         result = runner.invoke(app, [
