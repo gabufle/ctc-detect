@@ -392,7 +392,7 @@ def main():
             print(f"Detected compression: {'gzip' if input_path.suffix == '.gz' else 'none'}")
             print(f"Detected delimiter:   {'tab' if detected_delim == tab_char else 'comma'}")
             print("\nFirst 5 lines:")
-            for i, line in enumerate(lines):
+            for _i, line in enumerate(lines):
                 print(f"  {line.rstrip()}")
 
             if confirm("\nConfirm delimiter and proceed?", default="y"):
