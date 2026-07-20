@@ -1,12 +1,11 @@
 """Tests for the evaluation module."""
 
 import numpy as np
-import pytest
 
 from ctcdetect.evaluation import (
     compute_metrics,
-    generate_eval_report,
     generate_eval_html_report,
+    generate_eval_report,
     plot_roc_pr,
 )
 

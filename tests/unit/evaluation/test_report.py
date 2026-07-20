@@ -1,12 +1,11 @@
 """Tests for report generation."""
 
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from ctcdetect.evaluation.reports import generate_report, generate_html_report
+from ctcdetect.evaluation.reports import generate_html_report, generate_report
 
 
 @pytest.fixture

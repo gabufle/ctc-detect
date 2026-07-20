@@ -8,7 +8,6 @@ from rich.table import Table
 from ctcdetect.cli.utils import console, print_banner, validate_input_path, validate_output_path
 from ctcdetect.core.detect import run_detection
 
-
 batch_app = typer.Typer(
     name="batch",
     help=(

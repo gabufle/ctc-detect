@@ -4,7 +4,7 @@ Provides the main detection pipeline and preprocessing utilities.
 """
 
 # Import submodules directly to avoid circular imports
-from ctcdetect.core import detect, model, pipeline, preprocess
+from ctcdetect.core import detect, model, pipeline, preprocess  # noqa: F401
 
 # Re-export public API
 from ctcdetect.core.detect import run_detection
@@ -20,6 +20,12 @@ from ctcdetect.core.preprocess import (
 )
 
 __all__ = [
+    # Submodules (imported to avoid circular imports)
+    "detect",
+    "model",
+    "pipeline",
+    "preprocess",
+    # Public API
     "run_detection",
     "load_model",
     "check_geneformer_available",

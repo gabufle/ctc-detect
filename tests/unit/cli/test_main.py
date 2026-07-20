@@ -1,9 +1,6 @@
 """Tests for the CTC-Detect CLI commands."""
 
-from pathlib import Path
-from unittest.mock import patch
 
-import pytest
 from typer.testing import CliRunner
 
 from ctcdetect.cli.app import app
@@ -99,7 +96,6 @@ def test_evaluate_missing_columns(temp_output_dir):
 def test_evaluate_ground_truth_missing_columns(temp_output_dir):
     """Evaluate with ground truth CSV missing required columns should exit with code 1."""
     import pandas as pd
-    import numpy as np
 
     # Create valid predictions
     pred_csv = temp_output_dir / "predictions.csv"

@@ -1,7 +1,6 @@
 """CTC-Detect CLI application factory."""
 
 import typer
-from rich.console import Console
 from rich.table import Table
 
 from ctcdetect.cli.utils import (
@@ -10,20 +9,18 @@ from ctcdetect.cli.utils import (
     validate_input_path,
     validate_output_path,
 )
-from ctcdetect.core.detect import run_detection
 from ctcdetect.config import (
     MODEL_REGISTRY,
     get_model_cache_path,
     get_system_info,
     get_version,
 )
+from ctcdetect.core.detect import run_detection
 from ctcdetect.evaluation.metrics import compute_metrics
 from ctcdetect.evaluation.plots import plot_roc_pr, plot_score_distribution
 from ctcdetect.evaluation.reports import (
-    generate_html_report,
-    generate_report,
-    generate_eval_report,
     generate_eval_html_report,
+    generate_eval_report,
 )
 
 app = typer.Typer(

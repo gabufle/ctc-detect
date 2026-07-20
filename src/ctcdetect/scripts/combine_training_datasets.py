@@ -77,8 +77,8 @@ def main():
     out_path.parent.mkdir(parents=True, exist_ok=True)
     combined.write_h5ad(str(out_path))
     print(f"\nWrote {out_path}")
-    print(f"\nSpot-check combined.obs[['source_dataset','patient_id','is_ctc']].sample(20) "
-          f"before uploading, to confirm patient_id extraction looks right for each source.")
+    print("\nSpot-check combined.obs[['source_dataset','patient_id','is_ctc']].sample(20) "
+          "before uploading, to confirm patient_id extraction looks right for each source.")
 
 
 if __name__ == "__main__":

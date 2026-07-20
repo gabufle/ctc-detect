@@ -1,13 +1,12 @@
 """Tests for the detection module."""
 
-from unittest.mock import MagicMock, patch, mock_open
+from unittest.mock import MagicMock
 
 import numpy as np
 import pandas as pd
 import pytest
-import scanpy as sc
 
-from ctcdetect.core.model import _resolve_model_dir, CHECKPOINT_DIR, FINETUNED_DIR
+from ctcdetect.core.model import _resolve_model_dir
 
 
 def test_prepare_adata_csv(tmp_path):

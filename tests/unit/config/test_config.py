@@ -3,13 +3,12 @@
 import pytest
 
 from ctcdetect.config import (
-    MODEL_REGISTRY,
-    VERSION_MAP,
     DEFAULT_MODEL,
-    get_version,
+    MODEL_REGISTRY,
+    __version__,
     get_model_cache_path,
     get_system_info,
-    __version__,
+    get_version,
 )
 
 

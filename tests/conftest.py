@@ -1,7 +1,5 @@
 """Shared test fixtures for CTC-Detect test suite."""
 
-import tempfile
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -128,7 +126,6 @@ def mock_adata():
 def mock_tokenized_dataset():
     """Create a mock tokenized dataset for training tests."""
     from datasets import Dataset
-    import torch
 
     n = 100
     max_len = 2048

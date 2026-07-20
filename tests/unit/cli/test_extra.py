@@ -1,11 +1,10 @@
 """Additional tests for CTC-Detect CLI to boost coverage."""
 
 from pathlib import Path
-from unittest.mock import patch, MagicMock
 
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
 from typer.testing import CliRunner
 
 from ctcdetect.cli.app import app
@@ -30,7 +29,7 @@ def test_run_command_missing_output(tmp_path):
     # Create a minimal CSV input
     csv_path = tmp_path / "input.csv"
     pd.DataFrame({"GENE1": [1, 2], "GENE2": [3, 4]}, index=["CELL1", "CELL2"]).to_csv(csv_path)
-    
+
     result = runner.invoke(app, [
         "run",
         "--input", str(csv_path),
@@ -137,61 +136,62 @@ def test_info_command_shows_version():
 def test_detect_format_cellranger(tmp_path):
     """Create temp dir with matrix.mtx → 'cellranger'."""
     from ctcdetect.core.preprocess import detect_format
-    
+
     # Create Cell Ranger-like directory structure
     cr_dir = tmp_path / "cellranger_output"
     cr_dir.mkdir()
     (cr_dir / "matrix.mtx").touch()
     (cr_dir / "barcodes.tsv").touch()
     (cr_dir / "features.tsv").touch()
-    
+
     assert detect_format(cr_dir) == "cellranger"
 
 
 def test_detect_format_cellranger_nested(tmp_path):
     """Create temp dir with filtered_feature_bc_matrix/ → 'cellranger'."""
     from ctcdetect.core.preprocess import detect_format
-    
+
     cr_dir = tmp_path / "sample_output"
     cr_dir.mkdir()
     nested = cr_dir / "filtered_feature_bc_matrix"
     nested.mkdir()
     (nested / "matrix.mtx").touch()
-    
+
     assert detect_format(cr_dir) == "cellranger"
 
 
 def test_detect_format_h5ad(tmp_path):
     """Create .h5ad file → 'h5ad'."""
-    from ctcdetect.core.preprocess import detect_format
     import scanpy as sc
-    
+
+    from ctcdetect.core.preprocess import detect_format
+
     h5ad_path = tmp_path / "test.h5ad"
     adata = sc.AnnData(X=np.ones((10, 5), dtype=np.float32))
     adata.obs_names = [f"cell_{i}" for i in range(10)]
     adata.var_names = [f"gene_{i}" for i in range(5)]
     adata.write_h5ad(str(h5ad_path))
-    
+
     assert detect_format(h5ad_path) == "h5ad"
 
 
 def test_detect_format_csv(tmp_path):
     """Create .csv file → 'csv'."""
     from ctcdetect.core.preprocess import detect_format
-    
+
     csv_path = tmp_path / "test.csv"
     csv_path.touch()
-    
+
     assert detect_format(csv_path) == "csv"
 
 
 def test_detect_format_tsv(tmp_path):
     """Create .tsv file → 'tsv'."""
     from ctcdetect.core.preprocess import detect_format
-    
+
     tsv_path = tmp_path / "test.tsv"
     tsv_path.touch()
-    
+
     assert detect_format(tsv_path) == "tsv"
 
 
@@ -199,10 +199,10 @@ def test_detect_format_unknown(tmp_path):
     """Unknown extension should raise InputError."""
     from ctcdetect.core.preprocess import detect_format
     from ctcdetect.exceptions import InputError
-    
+
     unknown_path = tmp_path / "test.xyz"
     unknown_path.touch()
-    
+
     with pytest.raises(InputError):
         detect_format(unknown_path)
 
@@ -211,7 +211,7 @@ def test_detect_format_nonexistent():
     """Non-existent path should raise InputError."""
     from ctcdetect.core.preprocess import detect_format
     from ctcdetect.exceptions import InputError
-    
+
     with pytest.raises(InputError):
         detect_format(Path("/nonexistent/path"))
 
@@ -219,7 +219,7 @@ def test_detect_format_nonexistent():
 def test_load_data_csv(tmp_path):
     """load_data should return AnnData for CSV."""
     from ctcdetect.core.preprocess import load_data
-    
+
     csv_path = tmp_path / "test.csv"
     df = pd.DataFrame(
         np.ones((5, 3), dtype=np.float32),
@@ -227,22 +227,23 @@ def test_load_data_csv(tmp_path):
         columns=[f"cell_{i}" for i in range(3)],
     )
     df.to_csv(csv_path)
-    
+
     adata = load_data(csv_path)
     assert adata.shape == (3, 5)  # cells x genes
 
 
 def test_load_data_h5ad(tmp_path):
     """load_data should return AnnData for h5ad."""
-    from ctcdetect.core.preprocess import load_data
     import scanpy as sc
-    
+
+    from ctcdetect.core.preprocess import load_data
+
     h5ad_path = tmp_path / "test.h5ad"
     adata = sc.AnnData(X=np.ones((10, 5), dtype=np.float32))
     adata.obs_names = [f"cell_{i}" for i in range(10)]
     adata.var_names = [f"gene_{i}" for i in range(5)]
     adata.write_h5ad(str(h5ad_path))
-    
+
     result = load_data(h5ad_path)
     assert result.shape == (10, 5)
 
@@ -250,7 +251,7 @@ def test_load_data_h5ad(tmp_path):
 def test_validate_input_csv(tmp_path):
     """validate_input should return True for valid CSV."""
     from ctcdetect.core.preprocess import validate_input
-    
+
     csv_path = tmp_path / "test.csv"
     df = pd.DataFrame(
         np.ones((5, 3), dtype=np.float32),
@@ -258,21 +259,22 @@ def test_validate_input_csv(tmp_path):
         columns=[f"cell_{i}" for i in range(3)],
     )
     df.to_csv(csv_path)
-    
+
     assert validate_input(csv_path) is True
 
 
 def test_validate_input_h5ad(tmp_path):
     """validate_input should return True for valid h5ad."""
-    from ctcdetect.core.preprocess import validate_input
     import scanpy as sc
-    
+
+    from ctcdetect.core.preprocess import validate_input
+
     h5ad_path = tmp_path / "test.h5ad"
     adata = sc.AnnData(X=np.ones((10, 5), dtype=np.float32))
     adata.obs_names = [f"cell_{i}" for i in range(10)]
     adata.var_names = [f"gene_{i}" for i in range(5)]
     adata.write_h5ad(str(h5ad_path))
-    
+
     assert validate_input(h5ad_path) is True
 
 
@@ -323,7 +325,7 @@ def test_config_get_system_info():
 def test_validate_output_path_creates_parents(tmp_path):
     """validate_output_path should create parent directories."""
     from ctcdetect.cli.utils import validate_output_path
-    
+
     output = tmp_path / "new_dir" / "subdir" / "output"
     result = validate_output_path(str(output))
     assert result.parent.exists()

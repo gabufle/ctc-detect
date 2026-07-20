@@ -7,7 +7,6 @@ from rich.table import Table
 from ctcdetect.cli.utils import console, print_banner
 from ctcdetect.config import get_system_info
 
-
 info_app = typer.Typer(
     help="Show CTC-Detect version and system information.",
 )

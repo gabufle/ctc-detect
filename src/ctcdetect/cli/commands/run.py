@@ -6,7 +6,6 @@ import typer
 from ctcdetect.cli.utils import console, print_banner, validate_input_path, validate_output_path
 from ctcdetect.core.detect import run_detection
 
-
 run_app = typer.Typer(
     help="Run CTC detection on a single sample.",
 )

@@ -1,13 +1,12 @@
 """Tests for input format detection and data loading."""
 
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pytest
 import scanpy as sc
 
-from ctcdetect.core.preprocess import detect_format, validate_input, load_data, SUPPORTED_FORMATS
+from ctcdetect.core.preprocess import SUPPORTED_FORMATS, detect_format, load_data, validate_input
 from ctcdetect.exceptions import InputError
 
 

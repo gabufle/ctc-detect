@@ -231,7 +231,7 @@ def main():
     gt_df.to_csv(gt_path, index=False)
     print(f"Wrote {gt_path}")
 
-    print(f"\nNext steps:")
+    print("\nNext steps:")
     print(
         f"  python scripts/run_and_eval.py --input {h5ad_path} --ground-truth {gt_path} --output results/{out_dir.name}"
     )
