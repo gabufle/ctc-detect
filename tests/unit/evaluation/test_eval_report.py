@@ -22,7 +22,7 @@ def test_choose_umap_indices_caps_rows_and_keeps_error_strata():
     idx = choose_umap_indices(y_true, y_pred, max_points=120, rng=rng)
 
     assert len(idx) <= 120
-    sampled_pairs = set(zip(y_true[idx], y_pred[idx]))
+    sampled_pairs = set(zip(y_true[idx], y_pred[idx], strict=True))
     assert (0, 1) in sampled_pairs
     assert (1, 0) in sampled_pairs
 

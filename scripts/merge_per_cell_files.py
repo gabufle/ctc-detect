@@ -67,7 +67,7 @@ def main():
         f = files[0]
         print(f"\nInspecting: {f.name}")
         with open_maybe_gzip(f) as fh:
-            for i, line in zip(range(10), fh):
+            for _i, line in zip(range(10), fh, strict=True):
                 print(f"  {line.rstrip()}")
         return
 

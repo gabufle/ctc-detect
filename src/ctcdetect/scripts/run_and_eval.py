@@ -6,9 +6,9 @@ just run this from the repo root (or with `src/` on PYTHONPATH) with the
 same deps the repo already needs (transformers, peft, scanpy, etc.).
 
 Usage:
-  python scripts/run_and_eval.py \
-      --input data/external/ge_et_al/data.h5ad \
-      --ground-truth data/external/ge_et_al/ground_truth.csv \
+  python scripts/run_and_eval.py \\
+      --input data/external/ge_et_al/data.h5ad \\
+      --ground-truth data/external/ge_et_al/ground_truth.csv \\
       --output results/ge_et_al
 """
 
@@ -17,12 +17,12 @@ import json
 import sys
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+
 # Make sure src/ is importable even without pip install -e .
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
-
-import numpy as np
-import pandas as pd
 
 
 def bootstrap_auroc_ci(y_true, y_scores, n_bootstrap=1000, ci=0.95, seed=42):

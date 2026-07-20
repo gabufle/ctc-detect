@@ -13,7 +13,6 @@ from ctcdetect.evaluation import (
 def test_compute_metrics_perfect():
     """Perfect predictions should yield AUROC=1.0 and AUPRC=1.0."""
     rng = np.random.default_rng(42)
-    n = 100
     y_true = np.array([0] * 50 + [1] * 50)
     # Perfect scores: all negatives get low score, all positives get high score
     y_scores = np.array(
