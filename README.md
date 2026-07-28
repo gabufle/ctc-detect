@@ -64,7 +64,7 @@ ctc-detect info
 ctc-detect model download
 ```
 
-> **Python version note:** This project uses `transformers==4.41.0` and `peft==0.11.0` which were validated with Python 3.10–3.11 and PyTorch 2.3.x. Python 3.12+ will pull newer PyTorch (≥2.6) which is API-compatible for inference but not tested for training. For exact training parity, use Python 3.10–3.11 (CI tests on 3.10/3.11/3.12).
+> **Python version note:** This project uses `transformers==4.41.0` and `peft==0.11.0` which were validated with Python 3.10–3.11 and PyTorch 2.3.x. Python 3.12+ will pull newer PyTorch (≥2.6) which is API-compatible for inference but not tested for training. For exact training parity, use Python 3.10–3.11 (CI tests on 3.10/3.11).
 
 ## CLI Usage — What Works Today
 
