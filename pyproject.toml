@@ -42,7 +42,6 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["ctcdetect*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
