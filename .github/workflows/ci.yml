@@ -40,13 +40,15 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-pip-
+      - name: Show Python version
+        run: python --version && pip --version
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install tokenizers --only-binary=tokenizers
-          pip install -e ".[dev]"
+          pip install -e ".[dev]" --verbose
       - name: Test
-        run: python -m pytest --cov=ctcdetect --cov-report=term-missing
+        run: python -m pytest --cov=ctcdetect --cov-report=term-missing -v
 
   typecheck:
     runs-on: ubuntu-latest
