@@ -1,11 +1,15 @@
 """Tests for report generation."""
 
-
 import numpy as np
 import pandas as pd
 import pytest
 
-from ctcdetect.evaluation.reports import generate_html_report, generate_report
+from ctcdetect.evaluation import (
+    generate_eval_html_report,
+    generate_eval_report,
+    generate_html_report,
+    generate_report,
+)
 
 
 @pytest.fixture

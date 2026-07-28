@@ -8,7 +8,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
 import numpy as np
 import pandas as pd
 
-from ctcdetect.scripts.eval_report import choose_umap_indices, collect_group_confusion
+# Import from the scripts folder directly
+from eval_report import choose_umap_indices, collect_group_confusion
 
 
 def test_choose_umap_indices_caps_rows_and_keeps_error_strata():
