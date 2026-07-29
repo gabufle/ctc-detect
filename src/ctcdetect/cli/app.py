@@ -16,6 +16,9 @@ from ctcdetect.config import (
     get_version,
 )
 from ctcdetect.core.detect import run_detection
+
+# Expose run_detection for test mocking
+__all__ = ["app", "run_detection"]
 from ctcdetect.evaluation.metrics import compute_metrics
 from ctcdetect.evaluation.plots import plot_roc_pr, plot_score_distribution
 from ctcdetect.evaluation.reports import (
