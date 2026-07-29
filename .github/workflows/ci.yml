@@ -46,7 +46,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]" --verbose
       - name: Test
-        run: python -m pytest --cov=ctcdetect --cov-report=term-missing -v
+        run: python -m pytest --cov=ctcdetect --cov-report=term-missing -v --tb=short -x
 
   typecheck:
     runs-on: ubuntu-latest
