@@ -22,7 +22,7 @@ dependencies = [
     "pyensembl>=2.10.1",
     "pydantic>=2.7.0",
     "pydantic-settings>=2.3.0",
-    "huggingface_hub>=0.36.0,<1.0.0",
+    "huggingface_hub>=0.36.0,<2.0.0",
     "datasets>=2.14.0",
     "pyarrow>=22.0.0,<25.0.0",
 ]
